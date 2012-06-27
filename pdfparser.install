@@ -1,0 +1,55 @@
+<?php
+
+function pdfparser_schema() {
+  $schema['pdfparser'] = array(
+    'description' => 'The base table for holding pdf contents.',
+    'fields' => array(
+      'id' => array('type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE),
+      'pdf_name' => array('type' => 'varchar', 'length' => 128, 'not null' => TRUE),
+      'upload_date' => array('type' => 'datetime', 'mysql_type' => 'DATETIME', 'not null' => TRUE),
+      'owner' => array('type' => 'int', 'unsigned' => TRUE),
+
+    ),
+    'unique keys' => array(
+      'pdf_name' => array('pdf_name')
+    ),
+    'foreign keys' => array(
+      'owner' => array(
+        'table' => 'users',
+        'columns' => 'uid',
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  return $schema;
+}
+
+function pdfparser_install() {
+  $path = 'sites/default/files/pdfparser';
+  variable_set('pdf_path',$path);
+  $p = getcwd() . '/' . $path;
+  if (!is_dir($p)) {
+    mkdir($p, 0777);
+  }
+}
+
+function pdfparser_uninstall() {
+  drupal_uninstall_schema('pdfparser');
+  $path = getcwd() . '/' . variable_get('pdf_path');
+  _rrmdir($path);
+  variable_del('pdf_path');
+}
+
+function _rrmdir($dir) {
+  foreach(glob($dir . '/*') as $file) {
+    if(is_dir($file)) {
+      _rrmdir($file);
+    }
+    else {
+      unlink($file);
+    }
+  }
+  rmdir($dir);
+}
+
+?>

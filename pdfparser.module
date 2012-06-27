@@ -1,0 +1,114 @@
+<?php
+
+
+/**
+ * Implements hook_menu().
+ */
+function pdfparser_menu() {
+  $items = array();
+
+  $items['admin/pdfparser'] = array(
+    'title' => 'PDF Parser',
+    'description' => 'Parser an uploaded pdf',
+    'page callback' => 'pdfparser_upload_pdf',
+    'access arguments' => array(TRUE),
+  );
+
+  $items['admin/pdfparser/upload'] = array(
+    'title' => 'Upload',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+
+  return $items;
+}
+
+function pdfparser_upload_pdf() {
+  $form = drupal_get_form('pdfparser_upload_pdf_form');
+  return drupal_render($form);
+}
+
+function pdfparser_upload_pdf_form() {
+
+  $form['pdf'] = array(
+    '#type' => 'file',
+    '#title' => 'PDF to upload',
+  );
+
+  $form['#attributes'] = array (
+    'enctype' => 'multipart/form-data',
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Upload pdf'),
+  );
+
+  return $form;
+}
+
+function pdfparser_upload_pdf_form_validate($form_id, &$form_values) {
+  $name = strtolower($_FILES['files']['name']['pdf']);
+  if (!_endsWith($name, '.pdf')) {
+    form_set_error('pdf', t('Invalid file format, please upload a pdf.'));
+  }
+}
+
+function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
+  $path = getcwd() . '/' . variable_get('pdf_path');
+  do {
+    $new_f_name = _generateCode(24) . '.pdf';
+  } while (is_file($path . '/' . $new_f_name));
+
+  if (is_dir($path)) {
+    move_uploaded_file($_FILES['files']['tmp_name']['pdf'], $path . '/' . $new_f_name);
+    
+
+    drupal_set_message(t('PDF uploaded successfully.'));
+  } else {
+    drupal_set_message(t('The path %path must exist to save pdf files to.', array('%path' => $path)),'error');
+  }
+}
+
+function _send_pdf_to_server($pdf_path) {
+
+  $dest = 'http://devoidmind.com/_dd/drupal/';
+  $eol = "\r\n";
+  $data = '';
+  $mime_boundary=md5(time());
+
+  $data .= '--' . $mime_boundary . $eol;
+  $data .= 'Content-Disposition: form-data; name="data_one_name"' . $eol . $eol;
+  $data .= "data_one_value" . $eol;
+  $data .= '--' . $mime_boundary . $eol;
+  $data .= 'Content-Disposition: form-data; name="data_two_name"; filename="filename.ext"' . $eol;
+  $data .= 'Content-Type: text/plain' . $eol;
+  $data .= 'Content-Transfer-Encoding: base64' . $eol . $eol;
+  $data .= chunk_split(base64_encode("Some file content, test")) . $eol;
+  $data .= "--" . $mime_boundary . "--" . $eol . $eol; // finish with two eol's!!
+
+
+  $res = drupal_http_request($dest, array(
+    'method' => 'GET',
+    'data' => 'key=val'
+  ));
+  dvm($res);
+}
+
+function _endsWith($haystack, $needle) {
+  $length = strlen($needle);
+  if ($length == 0) {
+    return true;
+  }
+  $start  = $length * -1; //negative
+  return (substr($haystack, $start) === $needle);
+}
+
+function _generateCode($length) {
+  $code = "";
+  $possible = "0123456789abcdefghijklmnopqrstuvwxyz";
+  for ($i = 0; $i < $length; $i++) {
+    $code .= substr($possible, mt_rand(0, strlen($possible) - 1), 1);
+  }
+  return $code;
+}
