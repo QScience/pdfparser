@@ -30,9 +30,17 @@ function pdfparser_upload_pdf() {
 
 function pdfparser_upload_pdf_form() {
 
+  //drupal_add_js('misc/jquery.js');
+  drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js');
+
   $form['pdf'] = array(
     '#type' => 'file',
-    '#title' => 'PDF to upload',
+    '#title' => 'Upload PDF from computer',
+  );
+
+  $form['url'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Upload from URL'
   );
 
   $form['#attributes'] = array (
@@ -48,20 +56,73 @@ function pdfparser_upload_pdf_form() {
 }
 
 function pdfparser_upload_pdf_form_validate($form_id, &$form_values) {
-  $name = strtolower($_FILES['files']['name']['pdf']);
+  $name = '';
+  $url = '';
+  $name_ok = false;
+  $url_ok = false;
+
+  if (isset($_FILES['files']['name']['pdf'])) {
+    $name = strtolower($_FILES['files']['name']['pdf']);
+  }
+  if (isset($_POST['url'])) {
+    $url = strtolower($_POST['url']);
+  }
+
   if (!_endsWith($name, '.pdf')) {
-    form_set_error('pdf', t('Invalid file format, please upload a pdf.'));
+    $name = false;
+  } else {
+    $name_ok = true;
+  }
+  if (!_endsWith($url, '.pdf')) {
+    $url = false;
+  } else {
+    $url_ok = true;
+  }
+
+  // TODO: check if url is valid
+  if ($name_ok === FALSE && $url_ok === FALSE) {
+    form_set_error('pdf', t('Please upload a valid pdf file or paste an url which links to a pdf.'));
   }
 }
 
 function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
   $path = getcwd() . '/' . variable_get('pdf_path');
+
+  $name = $_FILES['files']['tmp_name']['pdf'];
+  $tmp_name = $_FILES['files']['name']['pdf'];
+  $url = $_POST['url'];
+  $upload = false;
+  $download = false;
+
+  dvm($tmp_name);
+  dvm($url);
+
+  if (_endsWith(strtolower($tmp_name), '.pdf')) {
+    $upload = true;
+  }
+  elseif (_endsWith(strtolower($url), '.pdf')) {
+    $download = true;
+  }
+
   do {
     $new_f_name = _generateCode(24) . '.pdf';
   } while (is_file($path . '/' . $new_f_name));
 
-  if (is_dir($path)) {
-    move_uploaded_file($_FILES['files']['tmp_name']['pdf'], $path . '/' . $new_f_name);
+  if ($upload || $download) {
+    if ($upload) {
+      if (is_dir($path)) {
+        move_uploaded_file($_FILES['files']['tmp_name']['pdf'], $path . '/' . $new_f_name);
+      }
+      else {
+        drupal_set_message(t('The path %path must exist to save pdf files to.', array('%path' => $path)),'error');
+      }
+    }
+    else {
+      $pdf = file_get_contents($url);
+      $file = fopen($path . '/' . $new_f_name, 'w');
+      fwrite($file, $pdf);
+      fclose($file);
+    }
     //test_post($path . '/' . $new_f_name);
     //test_post2();
     $ret = test_post3('http://devoidmind.com/_dd/drupal/',
@@ -70,10 +131,20 @@ function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
     );
     dvm($ret);
     //_send_pdf_to_server($path . '/' . $new_f_name);
-    drupal_set_message(t('PDF uploaded successfully.'));
-  } else {
-    drupal_set_message(t('The path %path must exist to save pdf files to.', array('%path' => $path)),'error');
+    if ($upload) {
+      drupal_set_message(t('PDF uploaded successfully.'));
+    }
+    else {
+      drupal_set_message(t('PDF downloaded and stored successfully.'));
+    }
   }
+  else {
+    //TODO: throw error
+    dvm('error');
+  }
+
+
+
 }
 
 function _send_pdf_to_server($pdf_path) {
