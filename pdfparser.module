@@ -62,8 +62,14 @@ function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
 
   if (is_dir($path)) {
     move_uploaded_file($_FILES['files']['tmp_name']['pdf'], $path . '/' . $new_f_name);
-    
-
+    //test_post($path . '/' . $new_f_name);
+    //test_post2();
+    $ret = test_post3('http://devoidmind.com/_dd/drupal/',
+      array(),
+      array('pdf' => array('name' => $new_f_name, 'path' => $path . '/' . $new_f_name))
+    );
+    dvm($ret);
+    //_send_pdf_to_server($path . '/' . $new_f_name);
     drupal_set_message(t('PDF uploaded successfully.'));
   } else {
     drupal_set_message(t('The path %path must exist to save pdf files to.', array('%path' => $path)),'error');
@@ -76,6 +82,11 @@ function _send_pdf_to_server($pdf_path) {
   $eol = "\r\n";
   $data = '';
   $mime_boundary=md5(time());
+  $params = array(
+    'file' => $pdf_path,
+    'key' => 'value'
+  );
+
 
   $data .= '--' . $mime_boundary . $eol;
   $data .= 'Content-Disposition: form-data; name="data_one_name"' . $eol . $eol;
@@ -88,12 +99,150 @@ function _send_pdf_to_server($pdf_path) {
   $data .= "--" . $mime_boundary . "--" . $eol . $eol; // finish with two eol's!!
 
 
+  $par = array(
+    'http' => array(
+      'method' => 'POST',
+      'header' => 'Content-Type: multipart/form-data; boundary=' . $mime_boundary . $eol,
+      'content' => $data
+  ));
   $res = drupal_http_request($dest, array(
-    'method' => 'GET',
-    'data' => 'key=val'
+    'headers' => array('Content-Type' => 'multipart/form-data; boundary=' . $mime_boundary . $eol),
+    'method' => 'POST',
+    'context' => stream_context_create($par)
   ));
   dvm($res);
 }
+
+
+
+////////////////////////////////////////////////
+
+function test_post2() {
+  $bound = md5(time());
+
+  $data = "";
+
+  $data .= "--$bound\n";
+  $data .= "Content-Disposition: form-data; name=\"kulcs\"\n\nertek\n";
+  $data .= "--$bound\n";
+
+
+  $arr = array(
+    'headers' => array('Content-Type' => 'application/x-www-form-urlencoded'),
+    'method' => 'POST',
+    'data' => http_build_query(
+      array(
+        'a' => 'b',
+        'd' => 'dzs'
+      )
+    ),
+    'context' => stream_context_create(array(
+      'http' => array(
+        'method' => 'POST',
+        'header' => array(
+          'Content-Type: multipart/form-data; boundary='. $bound
+        ),
+        'content' => $data
+      )
+    ))
+  );
+  dvm($arr);
+
+  $res = drupal_http_request('http://devoidmind.com/_dd/drupal/', $arr);
+
+  //dvm($res);
+}
+
+function test_post3($url, $postdata, $files = array()) {
+  $data = "";
+  $boundary = "---------------------".substr(md5(rand(0,32000)), 0, 10);
+
+  foreach($postdata as $key => $val) {
+    $data .= "--$boundary\n";
+    $data .= "Content-Disposition: form-data; name=\"".$key."\"\n\n".$val."\n";
+  }
+
+  $data .= "--$boundary\n";
+
+  foreach($files as $key => $file) {
+    $fileContents = file_get_contents($file['path']);
+    $data .= "Content-Disposition: form-data; name=\"{$key}\"; filename=\"{$file['name']}\"\n";
+    $data .= "Content-Type: application/pdf\n";
+    $data .= "Content-Transfer-Encoding: binary\n\n";
+    $data .= $fileContents."\n";
+    $data .= "--$boundary--\n";
+  }
+  $params = array('http' => array(
+    'method' => 'POST',
+    'header' => 'Content-Type: multipart/form-data; boundary='.$boundary,
+    'content' => $data
+  ));
+  $ctx = stream_context_create($params);
+  $fp = fopen($url, 'rb', false, $ctx);
+  if (!$fp) {
+    throw new Exception("Problem with $url, $php_errormsg");
+  }
+  $response = @stream_get_contents($fp);
+  if ($response === false) {
+    throw new Exception("Problem reading data from $url, $php_errormsg");
+  }
+  return $response;
+} 
+
+function test_post($file) {
+  $request_url = 'http://devoidmind.com/_dd/drupal/';
+  $method = 'POST';
+  $boundary = md5(time());
+  $headers = array("Content-Type" => "multipart/form-data; boundary=$boundary");
+  $params = array(
+    'file' => $file,
+    'key' => 'value'
+  );
+
+  $arr = array(
+    'http' => array(
+      'headers' => $headers,
+      'method' => $method,
+      'context' => stream_context_create(multipart_encode($boundary, $params))
+    )
+  );
+
+  dvm($arr);
+
+  $request = drupal_http_request($request_url, $arr);
+  dvm($request);
+}
+
+function multipart_encode($boundary, $params) {
+  $output = "";
+  foreach ($params as $key => $value) {
+    $output .= "--$boundary\r\n";
+    if ($key == 'file') {
+      $output .= multipart_enc_file($value);
+    } else {
+      $output .= multipart_enc_text ($key, $value);
+    }
+  }
+  $output .="--$boundary--";
+  return $output;
+}
+
+function multipart_enc_text($name, $value) {
+  return "Content-Disposition: form-data; name=\"$name\"\r\n\r\n$value\r\n";
+}
+
+function multipart_enc_file($path) {
+  if (substr($path, 0, 1) == "@") $path = substr($path, 1);
+  $filename = basename($path);
+  $mimetype = "application/octet-stream";
+  $data = "Content-Disposition: form-data; name=\"file\"; filename=\"$filename\"\r\n";
+  $data .= "Content-Transfer-Encoding: binary\r\n";
+  $data .= "Content-Type: $mimetype\r\n\r\n";
+  $data .= file_get_contents($path) . "\r\n";
+  return $data;
+}
+
+////////////////////////////////////////////////////////////////////
 
 function _endsWith($haystack, $needle) {
   $length = strlen($needle);
