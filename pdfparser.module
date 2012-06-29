@@ -1,9 +1,15 @@
 <?php
 
-
 /**
- * Implements hook_menu().
+ *
+ * @file
+ * This module is for uploading a pdf journal then a remote server parses its
+ * content. PDF's could be uploaded locally or it is allowed to give an url
+ * which links to a pdf.
+ *
  */
+
+
 function pdfparser_menu() {
   $items = array();
 
@@ -43,7 +49,7 @@ function pdfparser_upload_pdf_form() {
     '#title' => 'Upload from URL'
   );
 
-  $form['#attributes'] = array (
+  $form['#attributes'] = array(
     'enctype' => 'multipart/form-data',
   );
 
@@ -58,30 +64,37 @@ function pdfparser_upload_pdf_form() {
 function pdfparser_upload_pdf_form_validate($form_id, &$form_values) {
   $name = '';
   $url = '';
-  $name_ok = false;
-  $url_ok = false;
+  $name_ok = FALSE;
+  $url_ok = FALSE;
 
   if (isset($_FILES['files']['name']['pdf'])) {
-    $name = strtolower($_FILES['files']['name']['pdf']);
+    $name = drupal_strtolower($_FILES['files']['name']['pdf']);
   }
-  if (isset($_POST['url'])) {
-    $url = strtolower($_POST['url']);
+  if (!empty($form_values['input']['url'])) {
+    $url = drupal_strtolower($form_values['input']['url']);
   }
 
-  if (!_endsWith($name, '.pdf')) {
-    $name = false;
-  } else {
-    $name_ok = true;
+  if (!_ends_with($name, '.pdf')) {
+    $name = FALSE;
   }
-  if (!_endsWith($url, '.pdf')) {
-    $url = false;
-  } else {
-    $url_ok = true;
+  else {
+    $name_ok = TRUE;
+  }
+  if (!_ends_with($url, '.pdf')) {
+    $url = FALSE;
+  }
+  else {
+    $url_ok = TRUE;
   }
 
   // TODO: check if url is valid
   if ($name_ok === FALSE && $url_ok === FALSE) {
     form_set_error('pdf', t('Please upload a valid pdf file or paste an url which links to a pdf.'));
+  }
+  elseif ($name_ok === FALSE && $url_ok !== FALSE) {
+    if (!is_valid_url($url)) {
+      form_set_error('url', t('Invalid url format.'));
+    }
   }
 }
 
@@ -90,22 +103,24 @@ function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
 
   $name = $_FILES['files']['tmp_name']['pdf'];
   $tmp_name = $_FILES['files']['name']['pdf'];
-  $url = $_POST['url'];
-  $upload = false;
-  $download = false;
+  $url = $form_values['input']['url'];
+  $upload = FALSE;
+  $download = FALSE;
+  $download_error = FALSE;
+  $error = FALSE;
 
   dvm($tmp_name);
   dvm($url);
 
-  if (_endsWith(strtolower($tmp_name), '.pdf')) {
-    $upload = true;
+  if (_ends_with(drupal_strtolower($tmp_name), '.pdf')) {
+    $upload = TRUE;
   }
-  elseif (_endsWith(strtolower($url), '.pdf')) {
-    $download = true;
+  elseif (_ends_with(drupal_strtolower($url), '.pdf')) {
+    $download = TRUE;
   }
 
   do {
-    $new_f_name = _generateCode(24) . '.pdf';
+    $new_f_name = _generate_code(24) . '.pdf';
   } while (is_file($path . '/' . $new_f_name));
 
   if ($upload || $download) {
@@ -114,37 +129,46 @@ function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
         move_uploaded_file($_FILES['files']['tmp_name']['pdf'], $path . '/' . $new_f_name);
       }
       else {
-        drupal_set_message(t('The path %path must exist to save pdf files to.', array('%path' => $path)),'error');
+        drupal_set_message(t('The path %path must exist to save pdf files to.', array('%path' => $path)), 'error');
       }
     }
     else {
-      $pdf = file_get_contents($url);
-      $file = fopen($path . '/' . $new_f_name, 'w');
-      fwrite($file, $pdf);
-      fclose($file);
+      $pdf = @file_get_contents($url);
+      if ($pdf === FALSE) {
+        $download_error = $error = TRUE;
+      }
+      else {
+        $file = fopen($path . '/' . $new_f_name, 'w');
+        fwrite($file, $pdf);
+        fclose($file);
+      }
     }
-    //test_post($path . '/' . $new_f_name);
-    //test_post2();
-    $ret = test_post3('http://devoidmind.com/_dd/drupal/',
-      array(),
-      array('pdf' => array('name' => $new_f_name, 'path' => $path . '/' . $new_f_name))
-    );
-    dvm($ret);
-    //_send_pdf_to_server($path . '/' . $new_f_name);
-    if ($upload) {
-      drupal_set_message(t('PDF uploaded successfully.'));
+    if ($error) {
+      if ($download_error) {
+        drupal_set_message(t('Unable to download file from url %url, please try again.', array('%url' => $url)), 'error');
+      }
+      else {
+        drupal_set_message(t('Unknown error.'), 'error');
+      }
     }
     else {
-      drupal_set_message(t('PDF downloaded and stored successfully.'));
+      $ret = test_post3('http://devoidmind.com/_dd/drupal/',
+        array(),
+        array('pdf' => array('name' => $new_f_name, 'path' => $path . '/' . $new_f_name))
+      );
+      dvm($ret);
+      if ($upload) {
+        drupal_set_message(t('PDF uploaded successfully.'));
+      }
+      else {
+        drupal_set_message(t('PDF downloaded and stored successfully.'));
+      }
     }
   }
   else {
     //TODO: throw error
     dvm('error');
   }
-
-
-
 }
 
 function _send_pdf_to_server($pdf_path) {
@@ -184,7 +208,9 @@ function _send_pdf_to_server($pdf_path) {
   dvm($res);
 }
 
-
+function is_valid_url($url) {
+  return preg_match('|^http(s)?://[a-z0-9-]+(.[a-z0-9-]+)*(:[0-9]+)?(/.*)?$|i', $url);
+}
 
 ////////////////////////////////////////////////
 
@@ -211,7 +237,7 @@ function test_post2() {
       'http' => array(
         'method' => 'POST',
         'header' => array(
-          'Content-Type: multipart/form-data; boundary='. $bound
+          'Content-Type: multipart/form-data; boundary=' . $bound
         ),
         'content' => $data
       )
@@ -226,39 +252,39 @@ function test_post2() {
 
 function test_post3($url, $postdata, $files = array()) {
   $data = "";
-  $boundary = "---------------------".substr(md5(rand(0,32000)), 0, 10);
+  $boundary = "---------------------" . drupal_substr(md5(rand(0, 32000)), 0, 10);
 
-  foreach($postdata as $key => $val) {
+  foreach ($postdata as $key => $val) {
     $data .= "--$boundary\n";
-    $data .= "Content-Disposition: form-data; name=\"".$key."\"\n\n".$val."\n";
+    $data .= "Content-Disposition: form-data; name=\"" . $key . "\"\n\n" . $val . "\n";
   }
 
   $data .= "--$boundary\n";
 
-  foreach($files as $key => $file) {
+  foreach ($files as $key => $file) {
     $fileContents = file_get_contents($file['path']);
     $data .= "Content-Disposition: form-data; name=\"{$key}\"; filename=\"{$file['name']}\"\n";
     $data .= "Content-Type: application/pdf\n";
     $data .= "Content-Transfer-Encoding: binary\n\n";
-    $data .= $fileContents."\n";
+    $data .= $fileContents . "\n";
     $data .= "--$boundary--\n";
   }
   $params = array('http' => array(
     'method' => 'POST',
-    'header' => 'Content-Type: multipart/form-data; boundary='.$boundary,
+    'header' => 'Content-Type: multipart/form-data; boundary=' . $boundary,
     'content' => $data
   ));
   $ctx = stream_context_create($params);
-  $fp = fopen($url, 'rb', false, $ctx);
+  $fp = fopen($url, 'rb', FALSE, $ctx);
   if (!$fp) {
     throw new Exception("Problem with $url, $php_errormsg");
   }
   $response = @stream_get_contents($fp);
-  if ($response === false) {
+  if ($response === FALSE) {
     throw new Exception("Problem reading data from $url, $php_errormsg");
   }
   return $response;
-} 
+}
 
 function test_post($file) {
   $request_url = 'http://devoidmind.com/_dd/drupal/';
@@ -290,8 +316,9 @@ function multipart_encode($boundary, $params) {
     $output .= "--$boundary\r\n";
     if ($key == 'file') {
       $output .= multipart_enc_file($value);
-    } else {
-      $output .= multipart_enc_text ($key, $value);
+    }
+    else {
+      $output .= multipart_enc_text($key, $value);
     }
   }
   $output .="--$boundary--";
@@ -303,7 +330,7 @@ function multipart_enc_text($name, $value) {
 }
 
 function multipart_enc_file($path) {
-  if (substr($path, 0, 1) == "@") $path = substr($path, 1);
+  if (drupal_substr($path, 0, 1) == "@") $path = drupal_substr($path, 1);
   $filename = basename($path);
   $mimetype = "application/octet-stream";
   $data = "Content-Disposition: form-data; name=\"file\"; filename=\"$filename\"\r\n";
@@ -315,20 +342,20 @@ function multipart_enc_file($path) {
 
 ////////////////////////////////////////////////////////////////////
 
-function _endsWith($haystack, $needle) {
-  $length = strlen($needle);
+function _ends_with($haystack, $needle) {
+  $length = drupal_strlen($needle);
   if ($length == 0) {
-    return true;
+    return TRUE;
   }
   $start  = $length * -1; //negative
-  return (substr($haystack, $start) === $needle);
+  return (drupal_substr($haystack, $start) === $needle);
 }
 
-function _generateCode($length) {
+function _generate_code($length) {
   $code = "";
   $possible = "0123456789abcdefghijklmnopqrstuvwxyz";
   for ($i = 0; $i < $length; $i++) {
-    $code .= substr($possible, mt_rand(0, strlen($possible) - 1), 1);
+    $code .= drupal_substr($possible, mt_rand(0, drupal_strlen($possible) - 1), 1);
   }
   return $code;
 }

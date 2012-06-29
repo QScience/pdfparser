@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @file
+ * Install and uninstall functions for the pdfparser module.
+ *
+ */
 function pdfparser_schema() {
   $schema['pdfparser'] = array(
     'description' => 'The base table for holding pdf contents.',
@@ -26,7 +31,7 @@ function pdfparser_schema() {
 
 function pdfparser_install() {
   $path = 'sites/default/files/pdfparser';
-  variable_set('pdf_path',$path);
+  variable_set('pdf_path', $path);
   $p = getcwd() . '/' . $path;
   if (!is_dir($p)) {
     mkdir($p, 0777);
@@ -41,8 +46,8 @@ function pdfparser_uninstall() {
 }
 
 function _rrmdir($dir) {
-  foreach(glob($dir . '/*') as $file) {
-    if(is_dir($file)) {
+  foreach (glob($dir . '/*') as $file) {
+    if (is_dir($file)) {
       _rrmdir($file);
     }
     else {
@@ -52,4 +57,4 @@ function _rrmdir($dir) {
   rmdir($dir);
 }
 
-?>
+
