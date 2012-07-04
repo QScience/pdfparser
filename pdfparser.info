@@ -3,8 +3,6 @@ description = Enables PDF parsing.
 
 core = 7.x
 version = 7.x-1.x-dev
-build = 7058
 package = PDF Parser
-php = 5.2
 
 files[] = pdfparser.install
