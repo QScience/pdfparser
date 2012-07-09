@@ -174,9 +174,28 @@ function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
 }
 
 function send_pdf_to_server($file) {
+  $module_path = drupal_get_path('module', 'pdfparser');
+
+  $signature = '';
+
+  $content = file_get_contents($file);
+  $crypted_hash = NULL;
+  //$priv_handler = fopen($module_path . '/id_rsa', 'r');
+  //$priv_key = fread($priv_handler, 8096);
+  $ssh_path = 'file://' . $module_path . '/id_rsa';
+  dvm($ssh_path);
+  $pkeyid = openssl_pkey_get_private('file://' . $module_path . '/id_rsa', 'sierra');
+  dvm($pkeyid);
+  $sign = openssl_sign($content, $crypted_hash, $pkeyid);
+  if ($sign) {
+    dvm('Signed successfully');
+    $signature = base64_encode($crypted_hash);
+  }
+  else {
+    dvm('Signaturing failed');
+  }
   $post = array(
-    'name' => 'kojak',
-    'age' => 25,
+    'signature' => $signature,
   );
 
 
