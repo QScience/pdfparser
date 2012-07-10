@@ -108,7 +108,7 @@ function pdfparser_upload_pdf_form_validate($form_id, &$form_values) {
 }
 
 function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
-  $path = getcwd() . '/' . variable_get('pdf_path');
+  $path = getcwd() . '/' . variable_get('pdfparser_pdf_path');
 
   $name = $_FILES['files']['tmp_name']['pdf'];
   $tmp_name = $_FILES['files']['name']['pdf'];
@@ -182,11 +182,13 @@ function send_pdf_to_server($file) {
   $crypted_hash = NULL;
   //$priv_handler = fopen($module_path . '/id_rsa', 'r');
   //$priv_key = fread($priv_handler, 8096);
-  $ssh_path = 'file://' . $module_path . '/id_rsa';
-  dvm($ssh_path);
-  $pkeyid = openssl_pkey_get_private('file://' . $module_path . '/id_rsa', 'sierra');
-  dvm($pkeyid);
-  $sign = openssl_sign($content, $crypted_hash, $pkeyid);
+  //$ssh_path = 'file://' . $module_path . '/drupal_key.pem';
+  //dvm($ssh_path);
+  //$pkeyid = openssl_pkey_get_private($ssh_path, 'asdasd');
+  //dvm($pkeyid);
+  $private_key = variable_get('pdfparser_private_key');
+  $pub_key = variable_get('pdfparser_public_key');
+  $sign = openssl_sign($content, $crypted_hash, $private_key);
   if ($sign) {
     dvm('Signed successfully');
     $signature = base64_encode($crypted_hash);
@@ -197,7 +199,6 @@ function send_pdf_to_server($file) {
   $post = array(
     'signature' => $signature,
   );
-
 
   $ret = do_post_request("http://devoidmind.com/_dd/drupal/parser_server/", json_encode($post), basename($file), $file); 
   $ret = json_decode($ret);
@@ -215,11 +216,11 @@ function do_post_request($url, $json, $filename, $filepath) {
 
   // POSTing the pdf data
   $data .= "--$boundary\n";
-  $fileContents = file_get_contents($filepath);
+  $file_contents = file_get_contents($filepath);
   $data .= "Content-Disposition: form-data; name=\"{$filename}\"; filename=\"{$filename}\"\n";
   $data .= "Content-Type: application/pdf\n";
   $data .= "Content-Transfer-Encoding: binary\n\n";
-  $data .= $fileContents."\n";
+  $data .= $file_contents."\n";
   $data .= "--$boundary--\n";
 
   // compiling the post request
