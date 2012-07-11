@@ -50,6 +50,12 @@ function pdfparser_upload_pdf() {
 
 function pdfparser_settings_form() {
 
+  $form['server_url'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Upload from URL',
+    '#value' => variable_get('pdfparser_server_url'),
+  );
+
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Send my public key to server'),
@@ -58,11 +64,14 @@ function pdfparser_settings_form() {
 }
 
 function pdfparser_settings_form_submit($form_id, &$form_values) {
+  $url = $form_values['input']['server_url'];
+  variable_set('pdfparser_server_url', $url);
+  dvm($url);
   $post = new stdClass();
   $post->func = 'set_public_key';
   $file = variable_get('pdfparser_public_key_path') . 'public_key';
 
-  $ret = do_post_request("http://devoidmind.com/_dd/drupal/parser_server/", json_encode($post), basename($file), $file);
+  $ret = do_post_request($url, json_encode($post), basename($file), $file);
   $ret = json_decode($ret);
   dvm($ret);
 }
@@ -220,7 +229,8 @@ function send_pdf_to_server($file) {
     'signature' => $signature,
   );
 
-  $ret = do_post_request("http://devoidmind.com/_dd/drupal/parser_server/", json_encode($post), basename($file), $file);
+  $url = variable_get('pdfparser_server_url');
+  $ret = do_post_request($url, json_encode($post), basename($file), $file);
   $ret = json_decode($ret);
   dvm($ret);
 }

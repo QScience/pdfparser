@@ -30,6 +30,7 @@ function pdfparser_schema() {
 }
 
 function pdfparser_install() {
+  variable_set('pdfparser_server_url', 'http://cflinux.hu/~kojak/_dd/drupal/parser_server/');
   // setting variables, creating folders
   $main_path = getcwd() . '/sites/default/files/pdfparser/';
   variable_set('pdfparser_main_path', $main_path);
@@ -66,6 +67,7 @@ function pdfparser_uninstall() {
   variable_del('pdfparser_pdf_path');
   variable_del('pdfparser_public_key_path');
   variable_del('pdfparser_private_key');
+  variable_del('pdfparser_server_url');
 }
 
 function _rrmdir($dir) {
