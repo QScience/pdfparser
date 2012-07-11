@@ -36,7 +36,7 @@ function pdfparser_install() {
   // creating folder to hold pdfs
   $p = getcwd() . '/' . $path;
   if (!is_dir($p)) {
-    mkdir($p, 0700);
+    mkdir($p, 0777);
   }
 
   // generating keys
