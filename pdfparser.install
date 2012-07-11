@@ -30,19 +30,31 @@ function pdfparser_schema() {
 }
 
 function pdfparser_install() {
+  // setting variables
   $path = 'sites/default/files/pdfparser';
-  variable_set('pdf_path', $path);
+  variable_set('pdfparser_pdf_path', $path);
+  // creating folder to hold pdfs
   $p = getcwd() . '/' . $path;
   if (!is_dir($p)) {
     mkdir($p, 0700);
   }
+
+  // generating keys
+  $res = openssl_pkey_new();
+  openssl_pkey_export($res, $private_key);
+  $public_key = openssl_pkey_get_details($res);
+  $public_key = $public_key['key'];
+  variable_set('pdfparser_private_key', $private_key);
+  variable_set('pdfparser_public_key', $public_key);
 }
 
 function pdfparser_uninstall() {
   drupal_uninstall_schema('pdfparser');
   $path = getcwd() . '/' . variable_get('pdf_path');
   _rrmdir($path);
-  variable_del('pdf_path');
+  variable_del('pdfparser_pdf_path');
+  variable_del('pdfparser_private_key');
+  variable_del('pdfparser_public_key');
 }
 
 function _rrmdir($dir) {

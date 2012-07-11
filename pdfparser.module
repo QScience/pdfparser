@@ -36,9 +36,6 @@ function pdfparser_upload_pdf() {
 
 function pdfparser_upload_pdf_form() {
 
-  //drupal_add_js('misc/jquery.js');
-  drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js');
-
   $form['pdf'] = array(
     '#type' => 'file',
     '#title' => 'Upload PDF from computer',
@@ -87,19 +84,18 @@ function pdfparser_upload_pdf_form_validate($form_id, &$form_values) {
     $url_ok = TRUE;
   }
 
-  // TODO: check if url is valid
   if ($name_ok === FALSE && $url_ok === FALSE) {
     form_set_error('pdf', t('Please upload a valid pdf file or paste an url which links to a pdf.'));
   }
   elseif ($name_ok === FALSE && $url_ok !== FALSE) {
-    if (!is_valid_url($url)) {
+    if (!_is_valid_url($url)) {
       form_set_error('url', t('Invalid url format.'));
     }
   }
 }
 
 function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
-  $path = getcwd() . '/' . variable_get('pdf_path');
+  $path = getcwd() . '/' . variable_get('pdfparser_pdf_path');
 
   $name = $_FILES['files']['tmp_name']['pdf'];
   $tmp_name = $_FILES['files']['name']['pdf'];
@@ -108,9 +104,6 @@ function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
   $download = FALSE;
   $download_error = FALSE;
   $error = FALSE;
-
-  dvm($tmp_name);
-  dvm($url);
 
   if (_ends_with(drupal_strtolower($tmp_name), '.pdf')) {
     $upload = TRUE;
@@ -152,17 +145,13 @@ function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
       }
     }
     else {
-      $ret = test_post3('http://devoidmind.com/_dd/drupal/',
-        array(),
-        array('pdf' => array('name' => $new_f_name, 'path' => $path . '/' . $new_f_name))
-      );
-      dvm($ret);
       if ($upload) {
         drupal_set_message(t('PDF uploaded successfully.'));
       }
       else {
         drupal_set_message(t('PDF downloaded and stored successfully.'));
       }
+      send_pdf_to_server($path . '/' . $new_f_name);
     }
   }
   else {
@@ -171,109 +160,64 @@ function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
   }
 }
 
-function _send_pdf_to_server($pdf_path) {
+function send_pdf_to_server($file) {
+  $module_path = drupal_get_path('module', 'pdfparser');
 
-  $dest = 'http://devoidmind.com/_dd/drupal/';
-  $eol = "\r\n";
-  $data = '';
-  $mime_boundary=md5(time());
-  $params = array(
-    'file' => $pdf_path,
-    'key' => 'value'
+  $signature = '';
+
+  $content = file_get_contents($file);
+  $crypted_hash = NULL;
+  //$priv_handler = fopen($module_path . '/id_rsa', 'r');
+  //$priv_key = fread($priv_handler, 8096);
+  //$ssh_path = 'file://' . $module_path . '/drupal_key.pem';
+  //dvm($ssh_path);
+  //$pkeyid = openssl_pkey_get_private($ssh_path, 'asdasd');
+  //dvm($pkeyid);
+  $private_key = variable_get('pdfparser_private_key');
+  $pub_key = variable_get('pdfparser_public_key');
+  $sign = openssl_sign($content, $crypted_hash, $private_key);
+  if ($sign) {
+    dvm('Signed successfully');
+    $signature = base64_encode($crypted_hash);
+  }
+  else {
+    dvm('Signaturing failed');
+  }
+  $post = array(
+    'signature' => $signature,
   );
 
+  $ret = do_post_request("http://devoidmind.com/_dd/drupal/parser_server/", json_encode($post), basename($file), $file);
+  $ret = json_decode($ret);
+  dvm($ret);
+}
 
-  $data .= '--' . $mime_boundary . $eol;
-  $data .= 'Content-Disposition: form-data; name="data_one_name"' . $eol . $eol;
-  $data .= "data_one_value" . $eol;
-  $data .= '--' . $mime_boundary . $eol;
-  $data .= 'Content-Disposition: form-data; name="data_two_name"; filename="filename.ext"' . $eol;
-  $data .= 'Content-Type: text/plain' . $eol;
-  $data .= 'Content-Transfer-Encoding: base64' . $eol . $eol;
-  $data .= chunk_split(base64_encode("Some file content, test")) . $eol;
-  $data .= "--" . $mime_boundary . "--" . $eol . $eol; // finish with two eol's!!
+function do_post_request($url, $json, $filename, $filepath) {
+  $data = "";
+  $boundary = drupal_substr(md5(rand(0, 32000)), 0, 10);
+  // POSTing JSON data
+  $data .= '--' . $boundary . "\n";
+  $data .= 'Content-Disposition: form-data; name="json"' . "\n";
+  $data .= 'Content-type: application/json' . "\n\n";
+  $data .= $json . "\n";
 
+  // POSTing the pdf data
+  $data .= "--$boundary\n";
+  $file_contents = file_get_contents($filepath);
+  $data .= "Content-Disposition: form-data; name=\"{$filename}\"; filename=\"{$filename}\"\n";
+  $data .= "Content-Type: application/pdf\n";
+  $data .= "Content-Transfer-Encoding: binary\n\n";
+  $data .= $file_contents . "\n";
+  $data .= "--$boundary--\n";
 
-  $par = array(
+  // compiling the post request
+  $params = array(
     'http' => array(
       'method' => 'POST',
-      'header' => 'Content-Type: multipart/form-data; boundary=' . $mime_boundary . $eol,
+      'header' => 'Content-Type: multipart/form-data; boundary=' . $boundary,
       'content' => $data
-  ));
-  $res = drupal_http_request($dest, array(
-    'headers' => array('Content-Type' => 'multipart/form-data; boundary=' . $mime_boundary . $eol),
-    'method' => 'POST',
-    'context' => stream_context_create($par)
-  ));
-  dvm($res);
-}
-
-function is_valid_url($url) {
-  return preg_match('|^http(s)?://[a-z0-9-]+(.[a-z0-9-]+)*(:[0-9]+)?(/.*)?$|i', $url);
-}
-
-////////////////////////////////////////////////
-
-function test_post2() {
-  $bound = md5(time());
-
-  $data = "";
-
-  $data .= "--$bound\n";
-  $data .= "Content-Disposition: form-data; name=\"kulcs\"\n\nertek\n";
-  $data .= "--$bound\n";
-
-
-  $arr = array(
-    'headers' => array('Content-Type' => 'application/x-www-form-urlencoded'),
-    'method' => 'POST',
-    'data' => http_build_query(
-      array(
-        'a' => 'b',
-        'd' => 'dzs'
-      )
-    ),
-    'context' => stream_context_create(array(
-      'http' => array(
-        'method' => 'POST',
-        'header' => array(
-          'Content-Type: multipart/form-data; boundary=' . $bound
-        ),
-        'content' => $data
-      )
-    ))
+    )
   );
-  dvm($arr);
-
-  $res = drupal_http_request('http://devoidmind.com/_dd/drupal/', $arr);
-
-  //dvm($res);
-}
-
-function test_post3($url, $postdata, $files = array()) {
-  $data = "";
-  $boundary = "---------------------" . drupal_substr(md5(rand(0, 32000)), 0, 10);
-
-  foreach ($postdata as $key => $val) {
-    $data .= "--$boundary\n";
-    $data .= "Content-Disposition: form-data; name=\"" . $key . "\"\n\n" . $val . "\n";
-  }
-
-  $data .= "--$boundary\n";
-
-  foreach ($files as $key => $file) {
-    $fileContents = file_get_contents($file['path']);
-    $data .= "Content-Disposition: form-data; name=\"{$key}\"; filename=\"{$file['name']}\"\n";
-    $data .= "Content-Type: application/pdf\n";
-    $data .= "Content-Transfer-Encoding: binary\n\n";
-    $data .= $fileContents . "\n";
-    $data .= "--$boundary--\n";
-  }
-  $params = array('http' => array(
-    'method' => 'POST',
-    'header' => 'Content-Type: multipart/form-data; boundary=' . $boundary,
-    'content' => $data
-  ));
   $ctx = stream_context_create($params);
   $fp = fopen($url, 'rb', FALSE, $ctx);
   if (!$fp) {
@@ -286,61 +230,35 @@ function test_post3($url, $postdata, $files = array()) {
   return $response;
 }
 
-function test_post($file) {
-  $request_url = 'http://devoidmind.com/_dd/drupal/';
-  $method = 'POST';
-  $boundary = md5(time());
-  $headers = array("Content-Type" => "multipart/form-data; boundary=$boundary");
-  $params = array(
-    'file' => $file,
-    'key' => 'value'
-  );
+function post_json($url, $data, $function, $callback) {
 
-  $arr = array(
+  $json = new stdClass();
+  $json->data = $data;
+  $json->function = $function;
+  $params = array(
     'http' => array(
-      'headers' => $headers,
-      'method' => $method,
-      'context' => stream_context_create(multipart_encode($boundary, $params))
+      'method' => 'POST',
+      'header' => 'Content-Type: application/json;',
+      'content' => json_encode($json),
     )
   );
-
-  dvm($arr);
-
-  $request = drupal_http_request($request_url, $arr);
-  dvm($request);
-}
-
-function multipart_encode($boundary, $params) {
-  $output = "";
-  foreach ($params as $key => $value) {
-    $output .= "--$boundary\r\n";
-    if ($key == 'file') {
-      $output .= multipart_enc_file($value);
-    }
-    else {
-      $output .= multipart_enc_text($key, $value);
-    }
+  $ctx = stream_context_create($params);
+  $fp = fopen($url, 'rb', FALSE, $ctx);
+  if (!$fp) {
+    throw new Exception("Problem with $url, $php_errormsg");
   }
-  $output .="--$boundary--";
-  return $output;
+  $response = @stream_get_contents($fp);
+  if ($response === FALSE) {
+    throw new Exception("Problem reading data from $url, $php_errormsg");
+  }
+  $callback(json_decode($response));
 }
 
-function multipart_enc_text($name, $value) {
-  return "Content-Disposition: form-data; name=\"$name\"\r\n\r\n$value\r\n";
+function req_return($data) {
+  dvm($data);
 }
 
-function multipart_enc_file($path) {
-  if (drupal_substr($path, 0, 1) == "@") $path = drupal_substr($path, 1);
-  $filename = basename($path);
-  $mimetype = "application/octet-stream";
-  $data = "Content-Disposition: form-data; name=\"file\"; filename=\"$filename\"\r\n";
-  $data .= "Content-Transfer-Encoding: binary\r\n";
-  $data .= "Content-Type: $mimetype\r\n\r\n";
-  $data .= file_get_contents($path) . "\r\n";
-  return $data;
-}
-
-////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 
 function _ends_with($haystack, $needle) {
   $length = drupal_strlen($needle);
@@ -359,3 +277,9 @@ function _generate_code($length) {
   }
   return $code;
 }
+
+function _is_valid_url($url) {
+  return preg_match('|^http(s)?://[a-z0-9-]+(.[a-z0-9-]+)*(:[0-9]+)?(/.*)?$|i', $url);
+}
+
+
