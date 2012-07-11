@@ -52,7 +52,7 @@ function pdfparser_settings_form() {
 
   $form['server_url'] = array(
     '#type' => 'textfield',
-    '#title' => 'Upload from URL',
+    '#title' => 'The server URL',
     '#value' => variable_get('pdfparser_server_url'),
   );
 
