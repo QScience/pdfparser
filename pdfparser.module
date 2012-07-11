@@ -36,19 +36,6 @@ function pdfparser_upload_pdf() {
 
 function pdfparser_upload_pdf_form() {
 
-//  $url = 'http://devoidmind.com/_dd/drupal/rest_server/';
-//  $data = new stdClass();
-//  $data->a = 7;
-//  $data->b = 2;
-//  $function = 'multiply';
-//  $callback = 'req_return';
-//
-//  post_json($url, $data, $function, $callback);
-  
-  
-
-  //drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js');
-
   $form['pdf'] = array(
     '#type' => 'file',
     '#title' => 'Upload PDF from computer',
@@ -200,19 +187,19 @@ function send_pdf_to_server($file) {
     'signature' => $signature,
   );
 
-  $ret = do_post_request("http://devoidmind.com/_dd/drupal/parser_server/", json_encode($post), basename($file), $file); 
+  $ret = do_post_request("http://devoidmind.com/_dd/drupal/parser_server/", json_encode($post), basename($file), $file);
   $ret = json_decode($ret);
   dvm($ret);
 }
 
 function do_post_request($url, $json, $filename, $filepath) {
   $data = "";
-  $boundary = "".substr(md5(rand(0,32000)), 0, 10);
+  $boundary = drupal_substr(md5(rand(0, 32000)), 0, 10);
   // POSTing JSON data
-  $data .= '--'.$boundary."\n";
-  $data .= 'Content-Disposition: form-data; name="json"'."\n";
-  $data .= 'Content-type: application/json'."\n\n";
-  $data .= $json."\n";
+  $data .= '--' . $boundary . "\n";
+  $data .= 'Content-Disposition: form-data; name="json"' . "\n";
+  $data .= 'Content-type: application/json' . "\n\n";
+  $data .= $json . "\n";
 
   // POSTing the pdf data
   $data .= "--$boundary\n";
@@ -220,24 +207,24 @@ function do_post_request($url, $json, $filename, $filepath) {
   $data .= "Content-Disposition: form-data; name=\"{$filename}\"; filename=\"{$filename}\"\n";
   $data .= "Content-Type: application/pdf\n";
   $data .= "Content-Transfer-Encoding: binary\n\n";
-  $data .= $file_contents."\n";
+  $data .= $file_contents . "\n";
   $data .= "--$boundary--\n";
 
   // compiling the post request
   $params = array(
     'http' => array(
       'method' => 'POST',
-      'header' => 'Content-Type: multipart/form-data; boundary='.$boundary,
+      'header' => 'Content-Type: multipart/form-data; boundary=' . $boundary,
       'content' => $data
     )
   );
   $ctx = stream_context_create($params);
-  $fp = fopen($url, 'rb', false, $ctx);
+  $fp = fopen($url, 'rb', FALSE, $ctx);
   if (!$fp) {
     throw new Exception("Problem with $url, $php_errormsg");
   }
   $response = @stream_get_contents($fp);
-  if ($response === false) {
+  if ($response === FALSE) {
     throw new Exception("Problem reading data from $url, $php_errormsg");
   }
   return $response;
