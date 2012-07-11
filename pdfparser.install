@@ -30,13 +30,23 @@ function pdfparser_schema() {
 }
 
 function pdfparser_install() {
-  // setting variables
-  $path = 'sites/default/files/pdfparser';
-  variable_set('pdfparser_pdf_path', $path);
-  // creating folder to hold pdfs
-  $p = getcwd() . '/' . $path;
-  if (!is_dir($p)) {
-    mkdir($p, 0777);
+  // setting variables, creating folders
+  $main_path = getcwd() . '/sites/default/files/pdfparser/';
+  variable_set('pdfparser_main_path', $main_path);
+  if (!is_dir($main_path)) {
+    mkdir($main_path, 0777);
+  }
+
+  $pdf_path = $main_path . 'pdfs/';
+  variable_set('pdfparser_pdf_path', $pdf_path);
+  if (!is_dir($pdf_path)) {
+    mkdir($pdf_path, 0777);
+  }
+
+  $public_key_path = $main_path . 'public_key/';
+  variable_set('pdfparser_public_key_path', $public_key_path);
+  if (!is_dir($public_key_path)) {
+    mkdir($public_key_path, 0777);
   }
 
   // generating keys
@@ -45,16 +55,17 @@ function pdfparser_install() {
   $public_key = openssl_pkey_get_details($res);
   $public_key = $public_key['key'];
   variable_set('pdfparser_private_key', $private_key);
-  variable_set('pdfparser_public_key', $public_key);
+  file_put_contents($public_key_path . 'public_key', $public_key);
 }
 
 function pdfparser_uninstall() {
   drupal_uninstall_schema('pdfparser');
-  $path = getcwd() . '/' . variable_get('pdf_path');
+  $path = variable_get('pdfparser_main_path');
   _rrmdir($path);
+  variable_del('pdfparser_main_path');
   variable_del('pdfparser_pdf_path');
+  variable_del('pdfparser_public_key_path');
   variable_del('pdfparser_private_key');
-  variable_del('pdfparser_public_key');
 }
 
 function _rrmdir($dir) {

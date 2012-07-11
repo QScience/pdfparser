@@ -26,12 +26,45 @@ function pdfparser_menu() {
     'weight' => -10,
   );
 
+  $items['admin/pdfparser/settings'] = array(
+    'title' => 'Settings',
+    'description' => 'Settings menu to handle servers',
+    'page callback' => 'pdfparser_settings',
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => array(TRUE),
+    'weight' => -9,
+  );
+
   return $items;
+}
+
+function pdfparser_settings() {
+  $form = drupal_get_form('pdfparser_settings_form');
+  return drupal_render($form);
 }
 
 function pdfparser_upload_pdf() {
   $form = drupal_get_form('pdfparser_upload_pdf_form');
   return drupal_render($form);
+}
+
+function pdfparser_settings_form() {
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Send my public key to server'),
+  );
+  return $form;
+}
+
+function pdfparser_settings_form_submit($form_id, &$form_values) {
+  $post = new stdClass();
+  $post->func = 'set_public_key';
+  $file = variable_get('pdfparser_public_key_path') . 'public_key';
+
+  $ret = do_post_request("http://devoidmind.com/_dd/drupal/parser_server/", json_encode($post), basename($file), $file);
+  $ret = json_decode($ret);
+  dvm($ret);
 }
 
 function pdfparser_upload_pdf_form() {
@@ -95,7 +128,7 @@ function pdfparser_upload_pdf_form_validate($form_id, &$form_values) {
 }
 
 function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
-  $path = getcwd() . '/' . variable_get('pdfparser_pdf_path');
+  $path = variable_get('pdfparser_pdf_path');
 
   $name = $_FILES['files']['tmp_name']['pdf'];
   $tmp_name = $_FILES['files']['name']['pdf'];
@@ -174,7 +207,7 @@ function send_pdf_to_server($file) {
   //$pkeyid = openssl_pkey_get_private($ssh_path, 'asdasd');
   //dvm($pkeyid);
   $private_key = variable_get('pdfparser_private_key');
-  $pub_key = variable_get('pdfparser_public_key');
+  $pub_key = file_get_contents(variable_get('pdfparser_public_key_path') . 'public_key');
   $sign = openssl_sign($content, $crypted_hash, $private_key);
   if ($sign) {
     dvm('Signed successfully');
