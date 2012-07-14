@@ -63,17 +63,29 @@ function pdfparser_settings_form() {
   return $form;
 }
 
+function pdfparser_settings_form_validate($form_id, &$form_values) {
+  $url = $form_values['input']['server_url'];
+  $file_headers = @get_headers($url);
+  if($file_headers === FALSE || $file_headers[0] == 'HTTP/1.1 404 Not Found') {
+    form_set_error('server_url', t('Invalid url, please check again.'));
+  }
+}
+
 function pdfparser_settings_form_submit($form_id, &$form_values) {
   $url = $form_values['input']['server_url'];
   variable_set('pdfparser_server_url', $url);
-  dvm($url);
   $post = new stdClass();
   $post->func = 'set_public_key';
   $file = variable_get('pdfparser_public_key_path') . 'public_key';
 
   $ret = do_post_request($url, json_encode($post), basename($file), $file);
   $ret = json_decode($ret);
-  dvm($ret);
+  if (isset($ret->message) && $ret->message = 'public key saved') {
+    drupal_set_message(t('Public key saved succesfully.'));
+  }
+  else {
+    drupal_set_message(t('Invalid server address.'), 'error');
+  }
 }
 
 function pdfparser_upload_pdf_form() {
