@@ -193,7 +193,7 @@ function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
       else {
         drupal_set_message(t('PDF downloaded and stored successfully.'));
       }
-      send_pdf_to_server($path . '/' . $new_f_name);
+      send_pdf_to_server($path . $new_f_name);
     }
   }
   else {
