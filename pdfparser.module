@@ -80,11 +80,16 @@ function pdfparser_settings_form_submit($form_id, &$form_values) {
 
   $ret = do_post_request($url, json_encode($post), basename($file), $file);
   $ret = json_decode($ret);
-  if (isset($ret->message) && $ret->message = 'public key saved') {
-    drupal_set_message(t('Public key saved succesfully.'));
+  if (isset($ret->result)) {
+    if ($ret->result === 0) {
+      drupal_set_message(t('Public key saved succesfully.'));
+    }
+    else {
+      drupal_set_message(t('Invalid server address.'), 'error');
+    }
   }
   else {
-    drupal_set_message(t('Invalid server address.'), 'error');
+    drupal_set_message(t('Unrecognized message from server. Please check again your server\'s URL.'), 'error');
   }
 }
 
@@ -200,7 +205,7 @@ function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
     }
     else {
       if ($upload) {
-        drupal_set_message(t('PDF uploaded successfully.'));
+        drupal_set_message(t('PDF uploaded successfully to the local server.'));
       }
       else {
         drupal_set_message(t('PDF downloaded and stored successfully.'));
@@ -231,7 +236,6 @@ function send_pdf_to_server($file) {
   $pub_key = file_get_contents(variable_get('pdfparser_public_key_path') . 'public_key');
   $sign = openssl_sign($content, $crypted_hash, $private_key);
   if ($sign) {
-    dvm('Signed successfully');
     $signature = base64_encode($crypted_hash);
   }
   else {
@@ -244,7 +248,23 @@ function send_pdf_to_server($file) {
   $url = variable_get('pdfparser_server_url');
   $ret = do_post_request($url, json_encode($post), basename($file), $file);
   $ret = json_decode($ret);
-  dvm($ret);
+  if (isset($ret->result)) {
+    if ($ret->result === 0) {
+      drupal_set_message(t('PDF parsed successfully at remote server.'));
+    }
+    elseif ($ret->result === 1) {
+      drupal_set_message(t('Incorrect public key. Please upload your public key again from settings menu.'), 'error');
+    }
+    elseif ($ret->result === 2) {
+      drupal_set_message(t('Error on uploading.'), 'error');
+    }
+    else {
+      drupal_set_message(t('Unkown error. Please upload your public key again from settings menu2.'), 'error');
+    }
+  }
+  else {
+    drupal_set_message(t('Unrecognized message from server. Please check again your server\'s URL.'), 'error');
+  }
 }
 
 function do_post_request($url, $json, $filename, $filepath) {
