@@ -50,6 +50,12 @@ function pdfparser_install() {
     mkdir($public_key_path, 0777);
   }
 
+  $parsed_pdf_path = $main_path . 'parsed_pdfs/';
+  variable_set('pdfparser_parsed_pdf_path', $parsed_pdf_path);
+  if (!is_dir($parsed_pdf_path)) {
+    mkdir($parsed_pdf_path, 0777);
+  }
+
   // generating keys
   $res = openssl_pkey_new();
   openssl_pkey_export($res, $private_key);
@@ -65,6 +71,7 @@ function pdfparser_uninstall() {
   _rrmdir($path);
   variable_del('pdfparser_main_path');
   variable_del('pdfparser_pdf_path');
+  variable_del('pdfparser_parsed_pdf_path');
   variable_del('pdfparser_public_key_path');
   variable_del('pdfparser_private_key');
   variable_del('pdfparser_server_url');

@@ -205,6 +205,7 @@ function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
     }
     else {
       if ($upload) {
+        // TODO: maybe we should delete local pdf if there is some remote error?
         drupal_set_message(t('PDF uploaded successfully to the local server.'));
       }
       else {
@@ -246,11 +247,12 @@ function send_pdf_to_server($file) {
   );
 
   $url = variable_get('pdfparser_server_url');
-  $ret = do_post_request($url, json_encode($post), basename($file), $file);
-  $ret = json_decode($ret);
+  $ret_pure = do_post_request($url, json_encode($post), basename($file), $file);
+  $ret = json_decode($ret_pure);
   if (isset($ret->result)) {
     if ($ret->result === 0) {
       drupal_set_message(t('PDF parsed successfully at remote server.'));
+      pdfparser_store_xml($ret->xml_name, base64_decode($ret->xml_content));
     }
     elseif ($ret->result === 1) {
       drupal_set_message(t('Incorrect public key. Please upload your public key again from settings menu.'), 'error');
@@ -264,7 +266,16 @@ function send_pdf_to_server($file) {
   }
   else {
     drupal_set_message(t('Unrecognized message from server. Please check again your server\'s URL.'), 'error');
+    dvm($ret_pure);
   }
+}
+
+function pdfparser_store_xml($xml_name, $xml_content) {
+  $parsed_path = variable_get('pdfparser_parsed_pdf_path');
+  
+  $f = fopen($parsed_path . $xml_name, 'w');
+  fwrite($f, $xml_content);
+  fclose($f);
 }
 
 function do_post_request($url, $json, $filename, $filepath) {
