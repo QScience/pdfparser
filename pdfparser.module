@@ -35,7 +35,36 @@ function pdfparser_menu() {
     'weight' => -9,
   );
 
+  $items['admin/pdfparser/list'] = array(
+    'title' => 'List parsed PDFs',
+    'description' => 'List of parsed datas',
+    'page callback' => 'pdfparser_parsedlist',
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => array(TRUE),
+    'weight' => -8,
+  );
+
   return $items;
+}
+
+function pdfparser_parsedlist() {
+  $parsed = variable_get('pdfparser_parsed_pdf_path');
+
+  $scan = file_scan_directory($parsed, '/.*/' );
+  $files = array();
+  foreach ($scan as $key => $val) {
+    $files[] = $val->filename;
+  }
+  $variables = array();
+  $variables['items'] = $files;
+  $variables['title'] = 'Parsed pdf files';
+  $variables['type'] = 'ul';
+  $variables['attributes'] = array();
+
+  return theme_item_list($variables);
+}
+
+function pdfparser_parsedlist_form() {
 }
 
 function pdfparser_settings() {
