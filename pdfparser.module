@@ -38,6 +38,23 @@ function pdfparser_menu() {
   return $items;
 }
 
+function pdfparser_parsedlist() {
+  $parsed = variable_get('pdfparser_parsed_pdf_path');
+
+  $scan = file_scan_directory($parsed, '/.*/' );
+  $files = array();
+  foreach ($scan as $key => $val) {
+    $files[] = $val->filename;
+  }
+  $variables = array();
+  $variables['items'] = $files;
+  $variables['title'] = 'Parsed pdf files';
+  $variables['type'] = 'ul';
+  $variables['attributes'] = array();
+
+  return theme_item_list($variables);
+}
+
 function pdfparser_settings() {
   $form = drupal_get_form('pdfparser_settings_form');
   return drupal_render($form);
@@ -226,6 +243,7 @@ function send_pdf_to_server($file) {
   $signature = '';
 
   $content = file_get_contents($file);
+  $content_length = filesize($file);
   $crypted_hash = NULL;
   //$priv_handler = fopen($module_path . '/id_rsa', 'r');
   //$priv_key = fread($priv_handler, 8096);
@@ -252,7 +270,7 @@ function send_pdf_to_server($file) {
   if (isset($ret->result)) {
     if ($ret->result === 0) {
       drupal_set_message(t('PDF parsed successfully at remote server.'));
-      pdfparser_store_xml($ret->xml_name, base64_decode($ret->xml_content));
+      pdfparser_store_xml($ret->xml_name, base64_decode($ret->xml_content), $content_length);
     }
     elseif ($ret->result === 1) {
       drupal_set_message(t('Incorrect public key. Please upload your public key again from settings menu.'), 'error');
@@ -270,12 +288,139 @@ function send_pdf_to_server($file) {
   }
 }
 
-function pdfparser_store_xml($xml_name, $xml_content) {
+function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
   $parsed_path = variable_get('pdfparser_parsed_pdf_path');
   
   $f = fopen($parsed_path . $xml_name, 'w');
   fwrite($f, $xml_content);
   fclose($f);
+
+  //pdfparser_push_to_db($xml_name, $xml_content);
+
+  $tags_to_collect = array('title', 'author');
+  $obj = new stdClass();
+  $obj->title = FALSE;
+  $obj->authors = array();
+  $obj->citations = array();
+  $citation_num = -1;
+  pdfparser_xml_to_array(new SimpleXMLElement($xml_content), $obj, $tags_to_collect, 0, FALSE, $citation_num);
+  pdfparser_push_to_db($obj, $xml_name, $pdf_filesize);
+}
+
+function pdfparser_push_to_db($obj, $xml_name, $pdf_filesize) {
+  global $user;
+
+  $cnt = db_query("SELECT count(id) FROM {pdfparser_journal} WHERE pdf_length = :len AND title = :tit;",
+    array(':len' => $pdf_filesize, ':tit' => $obj->title))->fetchField();
+  $cnt = (int)$cnt;
+
+  if ($cnt === 0) {
+    $now = date("Y-m-d H:i:s", time());
+    $jid = db_insert('pdfparser_journal')
+      ->fields(array(
+        'pdf_name' => $xml_name,
+        'upload_date' => $now,
+        'owner' => $user->uid,
+        'title' => $obj->title,
+        'pdf_length' => $pdf_filesize,
+      ))
+      ->execute();
+  }
+  else {
+    drupal_set_message(
+      t('The uploaded journal probably already exists. (A file with the same title and same size exists.)'),
+      'warning');
+  }
+}
+
+function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citation, &$citation_num) {
+  $node_name = $xml->getName();
+
+  if ($node_name == 'citationList') {
+    $citation = TRUE;
+  }
+  
+  if ($citation) {
+    if ($node_name == 'citation') {
+      $citation_num++;
+    }
+  }
+  if (in_array($node_name, $tags_to_collect)) {
+    if ($citation === FALSE) {
+      if ($node_name == 'title') {
+        $obj->title = (string)$xml;
+      }
+      elseif ($node_name == 'author') {
+        $obj->authors[] = (string)$xml;
+      }
+    }
+    else {
+      if ($node_name == 'author') {
+        $obj->citations[$citation_num]->authors[] = (string)$xml;
+      }
+      elseif ($node_name == 'title') {
+        $obj->citations[$citation_num]->title = (string)$xml;
+      }
+    }
+  }
+  
+  foreach ($xml->children() as $ch_name => $ch_node) {
+    pdfparser_print_xml_structure($ch_node, $obj, $tags_to_collect, $level + 1, $citation, $citation_num);
+  }
+}
+
+function pdfparser_print_xml_structure($xml, &$obj, &$tags_to_collect, $level, $citation, &$citation_num) {
+  $ind = '';
+  $cont = '';
+  for ($i = 0; $i < $level; $i++) {
+    $ind .= '&nbsp;&nbsp;';
+  }
+  $node_name = $xml->getName();
+
+  if ($node_name == 'citationList') {
+    $citation = TRUE;
+  }
+  
+  $cont .= $ind . $node_name;
+  if ($citation) {
+    $cont .= ' (cit) ';
+    if ($node_name == 'citation') {
+      $citation_num++;
+    }
+  }
+  if (in_array($node_name, $tags_to_collect)) {
+    $cont .= ' (' . (string)$xml . ')';
+    if ($citation === FALSE) {
+      if ($node_name == 'title') {
+        $obj->title = (string)$xml;
+      }
+      elseif ($node_name == 'author') {
+        $obj->authors[] = (string)$xml;
+      }
+    }
+    else {
+      if ($node_name == 'author') {
+        //if (!isset($obj->citations[$citation_num]->authors)) {
+        $obj->citations[$citation_num]->authors[] = (string)$xml;
+        //}
+      }
+      elseif ($node_name == 'title') {
+        $obj->citations[$citation_num]->title = (string)$xml;
+      }
+    }
+  }
+  $cont .= '<br/>';
+  
+  
+  foreach ($xml->children() as $ch_name => $ch_node) {
+    $cont .= pdfparser_print_xml_structure($ch_node, $obj, $tags_to_collect, $level + 1, $citation, $citation_num);
+  }
+  if ($level == 0) {
+    dvm($cont);
+    dvm($obj);
+  } else {
+    return $cont;
+  }
 }
 
 function do_post_request($url, $json, $filename, $filepath) {

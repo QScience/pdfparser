@@ -6,17 +6,19 @@
  *
  */
 function pdfparser_schema() {
-  $schema['pdfparser'] = array(
+  $schema['pdfparser_journal'] = array(
     'description' => 'The base table for holding pdf contents.',
     'fields' => array(
       'id' => array('type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE),
       'pdf_name' => array('type' => 'varchar', 'length' => 128, 'not null' => TRUE),
       'upload_date' => array('type' => 'datetime', 'mysql_type' => 'DATETIME', 'not null' => TRUE),
       'owner' => array('type' => 'int', 'unsigned' => TRUE),
-
+      'title' => array('type' => 'varchar', 'length' => 224, 'not null' => TRUE),
+      'pdf_length' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE),
     ),
     'unique keys' => array(
-      'pdf_name' => array('pdf_name')
+      'pdf_name' => array('pdf_name'),
+      'journal' => array('title', 'pdf_length'),
     ),
     'foreign keys' => array(
       'owner' => array(
@@ -25,6 +27,27 @@ function pdfparser_schema() {
       ),
     ),
     'primary key' => array('id'),
+  );
+
+  $schema['pdfparser_authors'] = array(
+    'description' => 'Holds all authors for journal',
+    'fields' => array(
+      'id' => array('type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE),
+      'name' => array('type' => 'varchar', 'length' => 128, 'not null' => TRUE),
+      'insert_date' => array('type' => 'datetime', 'mysql_type' => 'DATETIME', 'not null' => TRUE),
+      'inserter' => array('type' => 'int', 'unsigned' => TRUE),
+    ),
+    'unique keys' => array(
+      'name' => array('name')
+    ),
+    'foreign keys' => array(
+      'inserter' => array(
+        'table' => 'users',
+        'columns' => 'uid',
+      ),
+    ),
+    'primary key' => array('id'),
+
   );
   return $schema;
 }
@@ -66,7 +89,8 @@ function pdfparser_install() {
 }
 
 function pdfparser_uninstall() {
-  drupal_uninstall_schema('pdfparser');
+  drupal_uninstall_schema('pdfparser_journal');
+  drupal_uninstall_schema('pdfparser_authors');
   $path = variable_get('pdfparser_main_path');
   _rrmdir($path);
   variable_del('pdfparser_main_path');
