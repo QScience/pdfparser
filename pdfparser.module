@@ -104,11 +104,15 @@ function pdfparser_settings_form_submit($form_id, &$form_values) {
   $post->func = 'set_public_key';
   $file = variable_get('pdfparser_public_key_path') . 'public_key';
 
-  $ret = do_post_request($url, json_encode($post), basename($file), $file);
-  $ret = json_decode($ret);
+  $ret_pure = do_post_request($url, json_encode($post), basename($file), $file);
+  $ret = json_decode($ret_pure);
   if (isset($ret->result)) {
     if ($ret->result === 0) {
       drupal_set_message(t('Public key saved succesfully.'));
+    }
+    elseif ($ret->result === 1) {
+      drupal_set_message(t('Cannot save public key at server side. Maybe there is no permission to do that.'), 'error');
+      dvm($ret_pure);
     }
     else {
       drupal_set_message(t('Invalid server address.'), 'error');
@@ -116,6 +120,7 @@ function pdfparser_settings_form_submit($form_id, &$form_values) {
   }
   else {
     drupal_set_message(t('Unrecognized message from server. Please check again your server\'s URL.'), 'error');
+    dvm($ret_pure);
   }
 }
 
@@ -298,6 +303,10 @@ function send_pdf_to_server($file) {
 }
 
 function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
+  if (strlen($xml_content) === 0) {
+    drupal_set_message(t('Parse failed.'), 'error');
+    return;
+  }
   $parsed_path = variable_get('pdfparser_parsed_pdf_path');
   
   $f = fopen($parsed_path . $xml_name, 'w');
@@ -313,11 +322,40 @@ function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
   $obj->citations = array();
   $citation_num = -1;
   pdfparser_xml_to_array(new SimpleXMLElement($xml_content), $obj, $tags_to_collect, 0, FALSE, $citation_num);
-  pdfparser_push_to_db($obj, $xml_name, $pdf_filesize);
+  $db_res = pdfparser_push_to_db($obj, $xml_name, $pdf_filesize);
+
+  $new_authrs_txt = '';
+  $existing_authrs_txt = '';
+  if (count($db_res->new_authors) !== 0) {
+    $new_authrs_txt = ' (' . implode(', ', $db_res->new_authors) . ')'; 
+  }
+  else {
+    $new_authrs_txt = '';
+  }
+  if (count($db_res->existing_authors) !== 0) {
+    $existing_authrs_txt = ' (' . implode(', ', $db_res->existing_authors) . ')'; 
+  }
+  else {
+    $existing_authrs_txt = '';
+  }
+
+  drupal_set_message(
+    t(':new_a new author(s) was inserted:new_authrs_txt, :existing_a author(s) already existing:existing_authrs_txt.',
+      array(':new_a' => $db_res->new_author_num, ':existing_a' => $db_res->existing_author_num, 
+        ':new_authrs_txt' => $new_authrs_txt, ':existing_authrs_txt' => $existing_authrs_txt
+      )
+    )
+  );
 }
 
 function pdfparser_push_to_db($obj, $xml_name, $pdf_filesize) {
   global $user;
+
+  $result = new stdClass();
+  $result->new_author_num = 0;
+  $result->existing_author_num = 0;
+  $result->new_authors = array();
+  $result->existing_authors = array();
 
   $cnt = db_query("SELECT count(id) FROM {pdfparser_journal} WHERE pdf_length = :len AND title = :tit;",
     array(':len' => $pdf_filesize, ':tit' => $obj->title))->fetchField();
@@ -334,12 +372,40 @@ function pdfparser_push_to_db($obj, $xml_name, $pdf_filesize) {
         'pdf_length' => $pdf_filesize,
       ))
       ->execute();
+    foreach ($obj->citations as $cit) {
+      if (isset($cit->authors)) {
+        foreach ($cit->authors as $auth) {
+          $cnt = db_query("SELECT count(id) FROM {pdfparser_authors} WHERE name = :name;",
+            array(':name' => $auth))
+            ->fetchField();
+          $cnt = (int)$cnt;
+          // adding author because not exists
+          if ($cnt === 0) {
+            $result->new_author_num++;
+            $result->new_authors[] = $auth;
+            $aid = db_insert('pdfparser_authors')
+              ->fields(array(
+                'name' => $auth,
+                'insert_date' => $now,
+                'inserter' => $user->uid,
+              ))
+              ->execute();
+          }
+          // author already exists
+          else {
+            $result->existing_author_num++;
+            $result->existing_authors[] = $auth;
+          }
+        }
+      }
+    }
   }
   else {
     drupal_set_message(
-      t('The uploaded journal probably already exists. (A file with the same title and same size exists.)'),
+      t('The uploaded journal probably already exists. (A file with the same title (:title) and same size (:size) exists.)', array(':title' => $obj->title, ':size' => $pdf_filesize)),
       'warning');
   }
+  return $result;
 }
 
 function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citation, &$citation_num) {
@@ -364,6 +430,11 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
       }
     }
     else {
+      if (!isset($obj->citations[$citation_num]) && ($node_name == 'author' || $node_name == 'title')) {
+        $obj->citations[$citation_num] = new stdClass();
+        //$obj->citations[$citation_num]->authors = array();
+        //$obj->citations[$citation_num]->title = FALSE;
+      }
       if ($node_name == 'author') {
         $obj->citations[$citation_num]->authors[] = (string)$xml;
       }
@@ -374,7 +445,7 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
   }
   
   foreach ($xml->children() as $ch_name => $ch_node) {
-    pdfparser_print_xml_structure($ch_node, $obj, $tags_to_collect, $level + 1, $citation, $citation_num);
+    pdfparser_xml_to_array($ch_node, $obj, $tags_to_collect, $level + 1, $citation, $citation_num);
   }
 }
 
