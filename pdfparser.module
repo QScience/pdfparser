@@ -35,6 +35,15 @@ function pdfparser_menu() {
     'weight' => -9,
   );
 
+  $items['admin/pdfparser/list'] = array(
+    'title' => 'List parsed PDFs',
+    'description' => 'List of parsed datas',
+    'page callback' => 'pdfparser_parsedlist',
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => array(TRUE),
+    'weight' => -8,
+  );
+
   return $items;
 }
 
