@@ -10,6 +10,12 @@
  */
 
 
+function pdfparser_paper_uploaded($file) {
+  drupal_set_message('Parsing pdf by parser server...');
+  //dvm($file->destination);
+  send_pdf_to_server($file->destination);
+}
+
 function pdfparser_menu() {
   $items = array();
 
@@ -287,7 +293,7 @@ function send_pdf_to_server($file) {
       pdfparser_store_xml($ret->xml_name, base64_decode($ret->xml_content), $content_length);
     }
     elseif ($ret->result === 1) {
-      drupal_set_message(t('Incorrect public key. Please upload your public key again from settings menu.'), 'error');
+      drupal_set_message(t('Incorrect public key. Please upload your public key again from PDFparser settings menu.'), 'error');
     }
     elseif ($ret->result === 2) {
       drupal_set_message(t('Error on uploading.'), 'error');
@@ -322,6 +328,7 @@ function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
   $obj->citations = array();
   $citation_num = -1;
   pdfparser_xml_to_array(new SimpleXMLElement($xml_content), $obj, $tags_to_collect, 0, FALSE, $citation_num);
+  
   $db_res = pdfparser_push_to_db($obj, $xml_name, $pdf_filesize);
 
   $new_authrs_txt = '';
@@ -363,6 +370,7 @@ function pdfparser_push_to_db($obj, $xml_name, $pdf_filesize) {
 
   if ($cnt === 0) {
     $now = date("Y-m-d H:i:s", time());
+    //$author_ids = pdfarser_make_author_insertations($obj, $now, $user->uid, $result);
     $jid = db_insert('pdfparser_journal')
       ->fields(array(
         'pdf_name' => $xml_name,
@@ -407,6 +415,47 @@ function pdfparser_push_to_db($obj, $xml_name, $pdf_filesize) {
   }
   return $result;
 }
+
+//function pdfparser_make_author_insertations($parsed_xml, $now, $user_id, &$result) {
+//  $authors = array();
+//  foreach ($obj->citations as $cit) {
+//    if (isset($cit->authors)) {
+//      foreach ($cit->authors as $auth) {
+//        if (!array_key_exists($auth, $authors)) {
+//          $authors[$auth] = 0;
+//        }
+//      }
+//    }
+//  }
+//  foreach ($authors as $name => $id) {
+//    $name_id = 0;
+//    $result = db_query("SELECT id FROM {pdfparser_authors} WHERE name = :name;",
+//      array(':name' => $name))
+//      ->fetchField();
+//    dvm($result);
+//    $name_id = (int)$result;
+//    // adding author because not exists
+//    if ($cnt === 0) {
+//      $result->new_author_num++;
+//      $result->new_authors[] = $name;
+//      $aid = db_insert('pdfparser_authors')
+//        ->fields(array(
+//          'name' => $name,
+//          'insert_date' => $now,
+//          'inserter' => $user_id,
+//        ))
+//        ->execute();
+//    }
+//    // author already exists
+//    else {
+//      $result->existing_author_num++;
+//      $result->existing_authors[] = $auth;
+//      $authors[$name] = 
+//    }
+//  }
+//
+//  return $authors;
+//}
 
 function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citation, &$citation_num) {
   $node_name = $xml->getName();
