@@ -66,9 +66,9 @@ function pdfparser_settings() {
   return drupal_render($form);
 }
 
-//function pdfparser_form_paper_node_form_alter(&$form, &$form_state, $form_id) {
-//  drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
-//}
+function pdfparser_form_paper_node_form_alter(&$form, &$form_state, $form_id) {
+  drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
+}
 
 //function pdfparser_upload_pdf() {
 //  $form = drupal_get_form('pdfparser_upload_pdf_form');
@@ -342,11 +342,8 @@ function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
   }
 
   drupal_set_message(
-    t('Recognized authors: :authors<br/>Recognized title: :title<br/>Recognized abstract: :abstract<br/>Recognized references: :refs',
+    t('Recognized references: :refs',
       array(
-        ':authors' => implode(', ', $obj->authors),
-        ':title' => $obj->title,
-        ':abstract' => $obj->abstract,
         ':refs' => print_r($obj->citations, true),
       )
     )
@@ -359,13 +356,14 @@ function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
  * @param type $obj 
  */
 function pdfparser_change_paper_upload_form_content_with_js($obj) {
-  $js = <<<JS_CODE
-    <script type="text/javascript">
-      console.log(parent.print());
-    </script>
-JS_CODE;
-  
-  echo $js;
+  drupal_add_js(
+    array(
+      'pdfparser' => array(
+        'title' => $obj->title,
+        'abstr' => $obj->abstract,
+        'authors' => implode(", ", $obj->authors),
+      )
+    ), 'setting');
 }
 
 function pdfparser_push_to_db($obj, $xml_name, $pdf_filesize) {

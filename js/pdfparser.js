@@ -1,23 +1,26 @@
 (function ($) {
   $(document).ready(function() {
-    console.log('pdfparser loaded...');
+//    console.log('pdfparser loaded...');
   });
-  function pdfparser_show_title() {
-    alert(Drupal.settings.pdfparser.title);
-  }
   
-  function pdfparser_test() {
-    console.log('test');
-    alert('test');
-  }
-  
-  console.log('asder');
-  
+  $(document).ajaxComplete(function(e, xhr, settings) {
+    if (settings.extraData._triggering_element_name == 'field_paper_upload_und_0_upload_button') {
+      if (Drupal.settings && Drupal.settings.pdfparser) {
+        if (Drupal.settings.pdfparser.title) {
+          $('#edit-title').val(Drupal.settings.pdfparser.title);
+        }
+        if (Drupal.settings.pdfparser.abstr) {
+          $('#edit-abstract-und-0-value').val(Drupal.settings.pdfparser.abstr);
+        }
+        if (Drupal.settings.pdfparser.authors) {
+          $('#edit-authorname-und-0-value').val(Drupal.settings.pdfparser.authors);
+        }
+      }
+    } else if (settings.extraData._triggering_element_name == 'field_paper_upload_und_0_remove_button') {
+      $('#edit-title').val('');
+      $('#edit-abstract-und-0-value').val('');
+      $('#edit-authorname-und-0-value').val('');
+    }
+    
+  });
 })(jQuery);
-
-console.log('asder2');
-
-function pdfparser_test2() {
-  console.log('test');
-  alert('test');
-}
