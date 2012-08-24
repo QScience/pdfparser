@@ -11,8 +11,6 @@
 
 
 function pdfparser_paper_uploaded($file) {
-  drupal_set_message('Parsing pdf by parser server...');
-  //dvm($file->destination);
   send_pdf_to_server($file->destination);
 }
 
@@ -292,6 +290,9 @@ function send_pdf_to_server($file) {
     }
     elseif ($ret->result === 2) {
       drupal_set_message(t('Error on uploading.'), 'error');
+    }
+    elseif ($ret->result === 3) {
+      drupal_set_message(t('There is no public key uploaded from your server yet. Please upload it from PDF Parser menu.'), 'error');
     }
     else {
       drupal_set_message(t('Unkown error. Please upload your public key again from settings menu2.'), 'error');
