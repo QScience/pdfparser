@@ -11,8 +11,6 @@
 
 
 function pdfparser_paper_uploaded($file) {
-  drupal_set_message('Parsing pdf by parser server...');
-  //dvm($file->destination);
   send_pdf_to_server($file->destination);
 }
 
@@ -21,23 +19,14 @@ function pdfparser_menu() {
 
   $items['admin/pdfparser'] = array(
     'title' => 'PDF Parser',
-    'description' => 'Parser an uploaded pdf',
-    'page callback' => 'pdfparser_upload_pdf',
+    'description' => 'PDF parser',
+    'page callback' => 'pdfparser_settings',
     'access arguments' => array(TRUE),
-  );
-
-  $items['admin/pdfparser/upload'] = array(
-    'title' => 'Upload',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -10,
   );
 
   $items['admin/pdfparser/settings'] = array(
     'title' => 'Settings',
-    'description' => 'Settings menu to handle servers',
-    'page callback' => 'pdfparser_settings',
-    'type' => MENU_LOCAL_TASK,
-    'access arguments' => array(TRUE),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -9,
   );
 
@@ -49,7 +38,7 @@ function pdfparser_menu() {
     'access arguments' => array(TRUE),
     'weight' => -8,
   );
-
+  
   return $items;
 }
 
@@ -75,10 +64,14 @@ function pdfparser_settings() {
   return drupal_render($form);
 }
 
-function pdfparser_upload_pdf() {
-  $form = drupal_get_form('pdfparser_upload_pdf_form');
-  return drupal_render($form);
+function pdfparser_form_paper_node_form_alter(&$form, &$form_state, $form_id) {
+  drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
 }
+
+//function pdfparser_upload_pdf() {
+//  $form = drupal_get_form('pdfparser_upload_pdf_form');
+//  return drupal_render($form);
+//}
 
 function pdfparser_settings_form() {
 
@@ -130,132 +123,132 @@ function pdfparser_settings_form_submit($form_id, &$form_values) {
   }
 }
 
-function pdfparser_upload_pdf_form() {
+//function pdfparser_upload_pdf_form() {
+//
+//  $form['pdf'] = array(
+//    '#type' => 'file',
+//    '#title' => 'Upload PDF from computer',
+//  );
+//
+//  $form['url'] = array(
+//    '#type' => 'textfield',
+//    '#title' => 'Upload from URL'
+//  );
+//
+//  $form['#attributes'] = array(
+//    'enctype' => 'multipart/form-data',
+//  );
+//
+//  $form['submit'] = array(
+//    '#type' => 'submit',
+//    '#value' => t('Upload pdf'),
+//  );
+//
+//  return $form;
+//}
 
-  $form['pdf'] = array(
-    '#type' => 'file',
-    '#title' => 'Upload PDF from computer',
-  );
+//function pdfparser_upload_pdf_form_validate($form_id, &$form_values) {
+//  $name = '';
+//  $url = '';
+//  $name_ok = FALSE;
+//  $url_ok = FALSE;
+//
+//  if (isset($_FILES['files']['name']['pdf'])) {
+//    $name = drupal_strtolower($_FILES['files']['name']['pdf']);
+//  }
+//  if (!empty($form_values['input']['url'])) {
+//    $url = drupal_strtolower($form_values['input']['url']);
+//  }
+//
+//  if (!_ends_with($name, '.pdf')) {
+//    $name = FALSE;
+//  }
+//  else {
+//    $name_ok = TRUE;
+//  }
+//  if (!_ends_with($url, '.pdf')) {
+//    $url = FALSE;
+//  }
+//  else {
+//    $url_ok = TRUE;
+//  }
+//
+//  if ($name_ok === FALSE && $url_ok === FALSE) {
+//    form_set_error('pdf', t('Please upload a valid pdf file or paste an url which links to a pdf.'));
+//  }
+//  elseif ($name_ok === FALSE && $url_ok !== FALSE) {
+//    if (!_is_valid_url($url)) {
+//      form_set_error('url', t('Invalid url format.'));
+//    }
+//  }
+//}
 
-  $form['url'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Upload from URL'
-  );
-
-  $form['#attributes'] = array(
-    'enctype' => 'multipart/form-data',
-  );
-
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Upload pdf'),
-  );
-
-  return $form;
-}
-
-function pdfparser_upload_pdf_form_validate($form_id, &$form_values) {
-  $name = '';
-  $url = '';
-  $name_ok = FALSE;
-  $url_ok = FALSE;
-
-  if (isset($_FILES['files']['name']['pdf'])) {
-    $name = drupal_strtolower($_FILES['files']['name']['pdf']);
-  }
-  if (!empty($form_values['input']['url'])) {
-    $url = drupal_strtolower($form_values['input']['url']);
-  }
-
-  if (!_ends_with($name, '.pdf')) {
-    $name = FALSE;
-  }
-  else {
-    $name_ok = TRUE;
-  }
-  if (!_ends_with($url, '.pdf')) {
-    $url = FALSE;
-  }
-  else {
-    $url_ok = TRUE;
-  }
-
-  if ($name_ok === FALSE && $url_ok === FALSE) {
-    form_set_error('pdf', t('Please upload a valid pdf file or paste an url which links to a pdf.'));
-  }
-  elseif ($name_ok === FALSE && $url_ok !== FALSE) {
-    if (!_is_valid_url($url)) {
-      form_set_error('url', t('Invalid url format.'));
-    }
-  }
-}
-
-function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
-  $path = variable_get('pdfparser_pdf_path');
-
-  $name = $_FILES['files']['tmp_name']['pdf'];
-  $tmp_name = $_FILES['files']['name']['pdf'];
-  $url = $form_values['input']['url'];
-  $upload = FALSE;
-  $download = FALSE;
-  $download_error = FALSE;
-  $error = FALSE;
-
-  if (_ends_with(drupal_strtolower($tmp_name), '.pdf')) {
-    $upload = TRUE;
-  }
-  elseif (_ends_with(drupal_strtolower($url), '.pdf')) {
-    $download = TRUE;
-  }
-
-  do {
-    $new_f_name = _generate_code(24) . '.pdf';
-  } while (is_file($path . '/' . $new_f_name));
-
-  if ($upload || $download) {
-    if ($upload) {
-      if (is_dir($path)) {
-        move_uploaded_file($_FILES['files']['tmp_name']['pdf'], $path . '/' . $new_f_name);
-      }
-      else {
-        drupal_set_message(t('The path %path must exist to save pdf files to.', array('%path' => $path)), 'error');
-      }
-    }
-    else {
-      $pdf = @file_get_contents($url);
-      if ($pdf === FALSE) {
-        $download_error = $error = TRUE;
-      }
-      else {
-        $file = fopen($path . '/' . $new_f_name, 'w');
-        fwrite($file, $pdf);
-        fclose($file);
-      }
-    }
-    if ($error) {
-      if ($download_error) {
-        drupal_set_message(t('Unable to download file from url %url, please try again.', array('%url' => $url)), 'error');
-      }
-      else {
-        drupal_set_message(t('Unknown error.'), 'error');
-      }
-    }
-    else {
-      if ($upload) {
-        // TODO: maybe we should delete local pdf if there is some remote error?
-        drupal_set_message(t('PDF uploaded successfully to the local server.'));
-      }
-      else {
-        drupal_set_message(t('PDF downloaded and stored successfully.'));
-      }
-      send_pdf_to_server($path . $new_f_name);
-    }
-  }
-  else {
-    //TODO: throw error
-    dvm('error');
-  }
-}
+//function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
+//  $path = variable_get('pdfparser_pdf_path');
+//
+//  $name = $_FILES['files']['tmp_name']['pdf'];
+//  $tmp_name = $_FILES['files']['name']['pdf'];
+//  $url = $form_values['input']['url'];
+//  $upload = FALSE;
+//  $download = FALSE;
+//  $download_error = FALSE;
+//  $error = FALSE;
+//
+//  if (_ends_with(drupal_strtolower($tmp_name), '.pdf')) {
+//    $upload = TRUE;
+//  }
+//  elseif (_ends_with(drupal_strtolower($url), '.pdf')) {
+//    $download = TRUE;
+//  }
+//
+//  do {
+//    $new_f_name = _generate_code(24) . '.pdf';
+//  } while (is_file($path . '/' . $new_f_name));
+//
+//  if ($upload || $download) {
+//    if ($upload) {
+//      if (is_dir($path)) {
+//        move_uploaded_file($_FILES['files']['tmp_name']['pdf'], $path . '/' . $new_f_name);
+//      }
+//      else {
+//        drupal_set_message(t('The path %path must exist to save pdf files to.', array('%path' => $path)), 'error');
+//      }
+//    }
+//    else {
+//      $pdf = @file_get_contents($url);
+//      if ($pdf === FALSE) {
+//        $download_error = $error = TRUE;
+//      }
+//      else {
+//        $file = fopen($path . '/' . $new_f_name, 'w');
+//        fwrite($file, $pdf);
+//        fclose($file);
+//      }
+//    }
+//    if ($error) {
+//      if ($download_error) {
+//        drupal_set_message(t('Unable to download file from url %url, please try again.', array('%url' => $url)), 'error');
+//      }
+//      else {
+//        drupal_set_message(t('Unknown error.'), 'error');
+//      }
+//    }
+//    else {
+//      if ($upload) {
+//        // TODO: maybe we should delete local pdf if there is some remote error?
+//        drupal_set_message(t('PDF uploaded successfully to the local server.'));
+//      }
+//      else {
+//        drupal_set_message(t('PDF downloaded and stored successfully.'));
+//      }
+//      send_pdf_to_server($path . $new_f_name);
+//    }
+//  }
+//  else {
+//    //TODO: throw error
+//    dvm('error');
+//  }
+//}
 
 function send_pdf_to_server($file) {
   $module_path = drupal_get_path('module', 'pdfparser');
@@ -298,6 +291,9 @@ function send_pdf_to_server($file) {
     elseif ($ret->result === 2) {
       drupal_set_message(t('Error on uploading.'), 'error');
     }
+    elseif ($ret->result === 3) {
+      drupal_set_message(t('There is no public key uploaded from your server yet. Please upload it from PDF Parser menu.'), 'error');
+    }
     else {
       drupal_set_message(t('Unkown error. Please upload your public key again from settings menu2.'), 'error');
     }
@@ -321,11 +317,12 @@ function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
 
   //pdfparser_push_to_db($xml_name, $xml_content);
 
-  $tags_to_collect = array('title', 'author');
+  $tags_to_collect = array('title', 'author', 'abstract');
   $obj = new stdClass();
   $obj->title = FALSE;
   $obj->authors = array();
   $obj->citations = array();
+  $obj->abstract = FALSE;
   $citation_num = -1;
   pdfparser_xml_to_array(new SimpleXMLElement($xml_content), $obj, $tags_to_collect, 0, FALSE, $citation_num);
   
@@ -347,12 +344,28 @@ function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
   }
 
   drupal_set_message(
-    t(':new_a new author(s) was inserted:new_authrs_txt, :existing_a author(s) already existing:existing_authrs_txt.',
-      array(':new_a' => $db_res->new_author_num, ':existing_a' => $db_res->existing_author_num, 
-        ':new_authrs_txt' => $new_authrs_txt, ':existing_authrs_txt' => $existing_authrs_txt
+    t('Recognized references: :refs',
+      array(
+        ':refs' => print_r($obj->citations, true),
       )
     )
   );
+  pdfparser_change_paper_upload_form_content_with_js($obj);
+}
+
+/**
+ * This function (or a function like this) should handle the parser result.
+ * @param type $obj 
+ */
+function pdfparser_change_paper_upload_form_content_with_js($obj) {
+  drupal_add_js(
+    array(
+      'pdfparser' => array(
+        'title' => $obj->title,
+        'abstr' => $obj->abstract,
+        'authors' => implode(", ", $obj->authors),
+      )
+    ), 'setting');
 }
 
 function pdfparser_push_to_db($obj, $xml_name, $pdf_filesize) {
@@ -410,7 +423,7 @@ function pdfparser_push_to_db($obj, $xml_name, $pdf_filesize) {
   }
   else {
     drupal_set_message(
-      t('The uploaded journal probably already exists. (A file with the same title (:title) and same size (:size) exists.)', array(':title' => $obj->title, ':size' => $pdf_filesize)),
+      t('The uploaded paper probably already exists. (A file with the same title (:title) and same size (:size kB) exists.)', array(':title' => $obj->title, ':size' => number_format($pdf_filesize / 1024, 1, ',', ' '))),
       'warning');
   }
   return $result;
@@ -476,6 +489,11 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
       }
       elseif ($node_name == 'author') {
         $obj->authors[] = (string)$xml;
+      }
+      elseif ($node_name == 'abstract') {
+        if ($obj->abstract === FALSE || strlen((string)$xml) > $obj->abstract) {
+          $obj->abstract = (string)$xml;
+        }
       }
     }
     else {
