@@ -10,6 +10,12 @@
  */
 
 
+function pdfparser_paper_uploaded($file) {
+  drupal_set_message('Parsing pdf by parser server...');
+  //dvm($file->destination);
+  send_pdf_to_server($file->destination);
+}
+
 function pdfparser_menu() {
   $items = array();
 
@@ -64,10 +70,10 @@ function pdfparser_settings() {
 //  drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
 //}
 
-function pdfparser_upload_pdf() {
-  $form = drupal_get_form('pdfparser_upload_pdf_form');
-  return drupal_render($form);
-}
+//function pdfparser_upload_pdf() {
+//  $form = drupal_get_form('pdfparser_upload_pdf_form');
+//  return drupal_render($form);
+//}
 
 function pdfparser_settings_form() {
 
@@ -355,8 +361,7 @@ function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
 function pdfparser_change_paper_upload_form_content_with_js($obj) {
   $js = <<<JS_CODE
     <script type="text/javascript">
-      console.log(document.getElementsByName('body').length);
-      console.log("hello world...");
+      console.log(parent.print());
     </script>
 JS_CODE;
   
