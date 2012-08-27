@@ -66,6 +66,12 @@ function pdfparser_settings() {
 
 function pdfparser_form_paper_node_form_alter(&$form, &$form_state, $form_id) {
   drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
+  
+  $lang = $form['field_paper_upload']['#language'];
+  $desc = $form['field_paper_upload'][$lang][0]['#description'];
+  $desc = explode("<br />", $desc);
+  $desc[0] = $desc[0] . ' ' . t('After uploading, the document will be parsed which will try to fill out your fields, so please hold on for a while. This should take only a few seconds.');
+  $form['field_paper_upload'][$lang][0]['#description'] = implode("<br />", $desc);
 }
 
 //function pdfparser_upload_pdf() {
