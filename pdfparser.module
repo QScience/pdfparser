@@ -317,9 +317,21 @@ function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
   }
   $parsed_path = variable_get('pdfparser_parsed_pdf_path');
   
-  $f = fopen($parsed_path . $xml_name, 'w');
-  fwrite($f, $xml_content);
-  fclose($f);
+  if (is_dir($parsed_path)) {
+    $f = fopen($parsed_path . $xml_name, 'w');
+    if ($f === FALSE) {
+      drupal_set_message(t('Failed to save the result file. The permission on the folder to save to is: :perm. Please check the folder and change the permission in order to save the result files.',
+        array(':perm' => substr(sprintf('%o', fileperms($parsed_path)), -4))), 'error');
+    }
+    else {
+      fwrite($f, $xml_content);
+      fclose($f);
+    }
+  }
+  else {
+    drupal_set_message(t('The directory :dir does not exists. Please create it in order to save the result files.',
+        array(':dir' => $parsed_path)), 'error');
+  }
 
   //pdfparser_push_to_db($xml_name, $xml_content);
 
