@@ -129,133 +129,6 @@ function pdfparser_settings_form_submit($form_id, &$form_values) {
   }
 }
 
-//function pdfparser_upload_pdf_form() {
-//
-//  $form['pdf'] = array(
-//    '#type' => 'file',
-//    '#title' => 'Upload PDF from computer',
-//  );
-//
-//  $form['url'] = array(
-//    '#type' => 'textfield',
-//    '#title' => 'Upload from URL'
-//  );
-//
-//  $form['#attributes'] = array(
-//    'enctype' => 'multipart/form-data',
-//  );
-//
-//  $form['submit'] = array(
-//    '#type' => 'submit',
-//    '#value' => t('Upload pdf'),
-//  );
-//
-//  return $form;
-//}
-
-//function pdfparser_upload_pdf_form_validate($form_id, &$form_values) {
-//  $name = '';
-//  $url = '';
-//  $name_ok = FALSE;
-//  $url_ok = FALSE;
-//
-//  if (isset($_FILES['files']['name']['pdf'])) {
-//    $name = drupal_strtolower($_FILES['files']['name']['pdf']);
-//  }
-//  if (!empty($form_values['input']['url'])) {
-//    $url = drupal_strtolower($form_values['input']['url']);
-//  }
-//
-//  if (!_ends_with($name, '.pdf')) {
-//    $name = FALSE;
-//  }
-//  else {
-//    $name_ok = TRUE;
-//  }
-//  if (!_ends_with($url, '.pdf')) {
-//    $url = FALSE;
-//  }
-//  else {
-//    $url_ok = TRUE;
-//  }
-//
-//  if ($name_ok === FALSE && $url_ok === FALSE) {
-//    form_set_error('pdf', t('Please upload a valid pdf file or paste an url which links to a pdf.'));
-//  }
-//  elseif ($name_ok === FALSE && $url_ok !== FALSE) {
-//    if (!_is_valid_url($url)) {
-//      form_set_error('url', t('Invalid url format.'));
-//    }
-//  }
-//}
-
-//function pdfparser_upload_pdf_form_submit($form_id, &$form_values) {
-//  $path = variable_get('pdfparser_pdf_path');
-//
-//  $name = $_FILES['files']['tmp_name']['pdf'];
-//  $tmp_name = $_FILES['files']['name']['pdf'];
-//  $url = $form_values['input']['url'];
-//  $upload = FALSE;
-//  $download = FALSE;
-//  $download_error = FALSE;
-//  $error = FALSE;
-//
-//  if (_ends_with(drupal_strtolower($tmp_name), '.pdf')) {
-//    $upload = TRUE;
-//  }
-//  elseif (_ends_with(drupal_strtolower($url), '.pdf')) {
-//    $download = TRUE;
-//  }
-//
-//  do {
-//    $new_f_name = _generate_code(24) . '.pdf';
-//  } while (is_file($path . '/' . $new_f_name));
-//
-//  if ($upload || $download) {
-//    if ($upload) {
-//      if (is_dir($path)) {
-//        move_uploaded_file($_FILES['files']['tmp_name']['pdf'], $path . '/' . $new_f_name);
-//      }
-//      else {
-//        drupal_set_message(t('The path %path must exist to save pdf files to.', array('%path' => $path)), 'error');
-//      }
-//    }
-//    else {
-//      $pdf = @file_get_contents($url);
-//      if ($pdf === FALSE) {
-//        $download_error = $error = TRUE;
-//      }
-//      else {
-//        $file = fopen($path . '/' . $new_f_name, 'w');
-//        fwrite($file, $pdf);
-//        fclose($file);
-//      }
-//    }
-//    if ($error) {
-//      if ($download_error) {
-//        drupal_set_message(t('Unable to download file from url %url, please try again.', array('%url' => $url)), 'error');
-//      }
-//      else {
-//        drupal_set_message(t('Unknown error.'), 'error');
-//      }
-//    }
-//    else {
-//      if ($upload) {
-//        // TODO: maybe we should delete local pdf if there is some remote error?
-//        drupal_set_message(t('PDF uploaded successfully to the local server.'));
-//      }
-//      else {
-//        drupal_set_message(t('PDF downloaded and stored successfully.'));
-//      }
-//      send_pdf_to_server($path . $new_f_name);
-//    }
-//  }
-//  else {
-//    //TODO: throw error
-//    dvm('error');
-//  }
-//}
-
 function send_pdf_to_server($file) {
   $module_path = drupal_get_path('module', 'pdfparser');
 
@@ -284,12 +157,16 @@ function send_pdf_to_server($file) {
   );
 
   $url = variable_get('pdfparser_server_url');
+  $start = microtime(TRUE);
   $ret_pure = do_post_request($url, json_encode($post), basename($file), $file);
+  $total_process_time = microtime(TRUE) - $start;
   $ret = json_decode($ret_pure);
   if (isset($ret->result)) {
     if ($ret->result === 0) {
       drupal_set_message(t('PDF parsed successfully at remote server.'));
-      pdfparser_store_xml($ret->xml_name, base64_decode($ret->xml_content), $content_length);
+      pdfparser_store_xml($ret->xml_name, base64_decode($ret->xml_citations), base64_decode($ret->xml_header), $content_length);
+      //drupal_set_message(t('Time of parsing: :time seconds', array(':time' => number_format($ret->ellapse, 2, ',', ''))));
+      //drupal_set_message(t('Time of total process :time seconds', array(':time' => number_format($total_process_time, 2, ',', ''))));
     }
     elseif ($ret->result === 1) {
       drupal_set_message(t('Incorrect public key. Please upload your public key again from PDFparser settings menu.'), 'error');
@@ -310,29 +187,9 @@ function send_pdf_to_server($file) {
   }
 }
 
-function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
-  if (strlen($xml_content) === 0) {
-    drupal_set_message(t('Parse failed.'), 'error');
-    return;
-  }
-  $parsed_path = variable_get('pdfparser_parsed_pdf_path');
-  
-  if (is_dir($parsed_path)) {
-    $f = fopen($parsed_path . $xml_name, 'w');
-    if ($f === FALSE) {
-      drupal_set_message(t('Failed to save the result file. The permission on the folder to save to is: :perm. Please check the folder and change the permission in order to save the result files.',
-        array(':perm' => substr(sprintf('%o', fileperms($parsed_path)), -4))), 'error');
-    }
-    else {
-      fwrite($f, $xml_content);
-      fclose($f);
-    }
-  }
-  else {
-    drupal_set_message(t('The directory :dir does not exists. Please create it in order to save the result files.',
-        array(':dir' => $parsed_path)), 'error');
-  }
-
+function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $pdf_filesize) {
+  _save_file($xml_name, $xml_citations, 'citations');
+  _save_file($xml_name, $xml_citations, 'header');
   //pdfparser_push_to_db($xml_name, $xml_content);
 
   $tags_to_collect = array('title', 'author', 'abstract');
@@ -342,7 +199,8 @@ function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
   $obj->citations = array();
   $obj->abstract = FALSE;
   $citation_num = -1;
-  pdfparser_xml_to_array(new SimpleXMLElement($xml_content), $obj, $tags_to_collect, 0, FALSE, $citation_num);
+  pdfparser_xml_to_array(new SimpleXMLElement($xml_citations), $obj, $tags_to_collect, 0, FALSE, $citation_num);
+  pdfparser_xml_to_array(new SimpleXMLElement($xml_header), $obj, $tags_to_collect, 0, FALSE, $citation_num);
   
   $db_res = pdfparser_push_to_db($obj, $xml_name, $pdf_filesize);
 
@@ -369,6 +227,29 @@ function pdfparser_store_xml($xml_name, $xml_content, $pdf_filesize) {
     )
   );
   pdfparser_change_paper_upload_form_content_with_js($obj);
+}
+
+function _save_file($file_name, $xml, $type) {
+  if (strlen($xml) === 0) {
+    return;
+  }
+  $parsed_path = variable_get('pdfparser_parsed_pdf_path');
+  
+  if (is_dir($parsed_path)) {
+    $f = fopen($parsed_path . $file_name . '.' . $type, 'w');
+    if ($f === FALSE) {
+      drupal_set_message(t('Failed to save the result file. The permission on the folder to save to is: :perm. Please check the folder and change the permission in order to save the result files.',
+        array(':perm' => substr(sprintf('%o', fileperms($parsed_path)), -4))), 'error');
+    }
+    else {
+      fwrite($f, $xml);
+      fclose($f);
+    }
+  }
+  else {
+    drupal_set_message(t('The directory :dir does not exists. Please create it in order to save the result files.',
+        array(':dir' => $parsed_path)), 'error');
+  }
 }
 
 /**
