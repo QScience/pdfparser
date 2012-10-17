@@ -219,13 +219,13 @@ function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $pdf_filesi
     $existing_authrs_txt = '';
   }
 
-  drupal_set_message(
-    t('Recognized references: :refs',
-      array(
-        ':refs' => print_r($obj->citations, true),
-      )
-    )
-  );
+//  drupal_set_message(
+//    t('Recognized references: :refs',
+//      array(
+//        ':refs' => print_r($obj->citations, true),
+//      )
+//    )
+//  );
   pdfparser_change_paper_upload_form_content_with_js($obj);
 }
 
@@ -262,9 +262,11 @@ function pdfparser_change_paper_upload_form_content_with_js($obj) {
       'pdfparser' => array(
         'title' => $obj->title,
         'abstr' => $obj->abstract,
-        'authors' => implode(", ", $obj->authors),
+        'authors' => $obj->authors,
+        'citations' => $obj->citations,
       )
-    ), 'setting');
+    ),
+    'setting');
 }
 
 function pdfparser_push_to_db($obj, $xml_name, $pdf_filesize) {
