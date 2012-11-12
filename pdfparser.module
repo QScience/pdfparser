@@ -43,7 +43,8 @@ function pdfparser_menu() {
 }
 
 function pdfparser_parsedlist() {
-  $parsed = variable_get('pdfparser_parsed_pdf_path');
+  $public = _pdfparser_get_public_path();
+  $parsed = $public . variable_get('pdfparser_parsed_pdf_path');
 
   $scan = file_scan_directory($parsed, '/.*/' );
   $files = array();
@@ -59,13 +60,21 @@ function pdfparser_parsedlist() {
   return theme_item_list($variables);
 }
 
+function _pdfparser_get_public_path() {
+  $public_uri = 'public://';
+  if ($wrapper = file_stream_wrapper_get_instance_by_uri('public://')) {
+    $public_uri = $wrapper->realpath();
+  }
+  return $public_uri;
+}
+
 function pdfparser_settings() {
   $form = drupal_get_form('pdfparser_settings_form');
   return drupal_render($form);
 }
 
 function pdfparser_form_paper_node_form_alter(&$form, &$form_state, $form_id) {
-  drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
+  //drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
   
   $lang = $form['field_paper_upload']['#language'];
   $desc = $form['field_paper_upload'][$lang][0]['#description'];
@@ -103,14 +112,16 @@ function pdfparser_settings_form_validate($form_id, &$form_values) {
 }
 
 function pdfparser_settings_form_submit($form_id, &$form_values) {
+  $public = _pdfparser_get_public_path();
   $url = $form_values['input']['server_url'];
   variable_set('pdfparser_server_url', $url);
   $post = new stdClass();
   $post->func = 'set_public_key';
-  $file = variable_get('pdfparser_public_key_path') . 'public_key';
+  $file = $public . variable_get('pdfparser_public_key_path') . 'public_key';
 
   $ret_pure = do_post_request($url, json_encode($post), basename($file), $file);
   $ret = json_decode($ret_pure);
+  $pdf_parser_link = l('PDFparser settings', 'admin/pdfparser');
   if (isset($ret->result)) {
     if ($ret->result === 0) {
       drupal_set_message(t('Public key saved succesfully.'));
@@ -124,7 +135,8 @@ function pdfparser_settings_form_submit($form_id, &$form_values) {
     }
   }
   else {
-    drupal_set_message(t('Unrecognized message from server. Please check again your server\'s URL.'), 'error');
+    drupal_set_message(t("Unrecognized message from server.
+      Please check again your server's URL at $pdf_parser_link menu."), 'error');
     dvm($ret_pure);
   }
 }
@@ -143,8 +155,9 @@ function send_pdf_to_server($file) {
   //dvm($ssh_path);
   //$pkeyid = openssl_pkey_get_private($ssh_path, 'asdasd');
   //dvm($pkeyid);
+  $public = _pdfparser_get_public_path();
   $private_key = variable_get('pdfparser_private_key');
-  $pub_key = file_get_contents(variable_get('pdfparser_public_key_path') . 'public_key');
+  $pub_key = file_get_contents($public . variable_get('pdfparser_public_key_path') . 'public_key');
   $sign = openssl_sign($content, $crypted_hash, $private_key);
   if ($sign) {
     $signature = base64_encode($crypted_hash);
@@ -161,6 +174,7 @@ function send_pdf_to_server($file) {
   $ret_pure = do_post_request($url, json_encode($post), basename($file), $file);
   $total_process_time = microtime(TRUE) - $start;
   $ret = json_decode($ret_pure);
+  $pdf_parser_link = l('PDFparser settings', 'admin/pdfparser');
   if (isset($ret->result)) {
     if ($ret->result === 0) {
       drupal_set_message(t('PDF parsed successfully at remote server.'));
@@ -169,20 +183,23 @@ function send_pdf_to_server($file) {
       //drupal_set_message(t('Time of total process :time seconds', array(':time' => number_format($total_process_time, 2, ',', ''))));
     }
     elseif ($ret->result === 1) {
-      drupal_set_message(t('Incorrect public key. Please upload your public key again from PDFparser settings menu.'), 'error');
+      drupal_set_message(t("Incorrect public key. Please upload your public key again from $pdf_parser_link menu."),
+      'error');
     }
     elseif ($ret->result === 2) {
       drupal_set_message(t('Error on uploading.'), 'error');
     }
     elseif ($ret->result === 3) {
-      drupal_set_message(t('There is no public key uploaded from your server yet. Please upload it from PDF Parser menu.'), 'error');
+      drupal_set_message(t("There is no public key uploaded from your server yet.
+        Please upload it from $pdf_parser_link menu."), 'error');
     }
     else {
-      drupal_set_message(t('Unkown error. Please upload your public key again from settings menu2.'), 'error');
+      drupal_set_message(t("Unkown error. Please upload your public key again from $pdf_parser_link menu."), 'error');
     }
   }
   else {
-    drupal_set_message(t('Unrecognized message from server. Please check again your server\'s URL.'), 'error');
+    drupal_set_message(t("Unrecognized message from server.
+      Please check again your server's URL at $pdf_parser_link menu."), 'error');
     dvm($ret_pure);
   }
 }
@@ -233,7 +250,8 @@ function _save_file($file_name, $xml, $type) {
   if (strlen($xml) === 0) {
     return;
   }
-  $parsed_path = variable_get('pdfparser_parsed_pdf_path');
+  $public = _pdfparser_get_public_path();
+  $parsed_path = $public . variable_get('pdfparser_parsed_pdf_path');
   
   if (is_dir($parsed_path)) {
     $f = fopen($parsed_path . $file_name . '.' . $type, 'w');

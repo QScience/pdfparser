@@ -55,28 +55,38 @@ function pdfparser_schema() {
 function pdfparser_install() {
   variable_set('pdfparser_server_url', 'http://www.inf.u-szeged.hu/rgai/~kojak/parser_server/');
   // setting variables, creating folders
-  $main_path = getcwd() . '/sites/default/files/pdfparser/';
+  $public_uri = FALSE;
+  if ($wrapper = file_stream_wrapper_get_instance_by_uri('public://')) {
+    $public_uri = $wrapper->realpath();
+  }
+  if ($public_uri === FALSE) {
+    drupal_set_message(t('Error at PDF Parser installation. Public URI is FALSE.'), 'error');
+    return;
+  }
+
+  // $main_path = getcwd() . '/sites/default/files/pdfparser/';
+  $main_path = '/pdfparser/';
   variable_set('pdfparser_main_path', $main_path);
-  if (!is_dir($main_path)) {
-    mkdir($main_path, 0777);
+  if (!is_dir($public_uri . $main_path)) {
+    mkdir($public_uri . $main_path, 0777);
   }
 
   $pdf_path = $main_path . 'pdfs/';
   variable_set('pdfparser_pdf_path', $pdf_path);
-  if (!is_dir($pdf_path)) {
-    mkdir($pdf_path, 0777);
+  if (!is_dir($public_uri . $pdf_path)) {
+    mkdir($public_uri . $pdf_path, 0777);
   }
 
   $public_key_path = $main_path . 'public_key/';
   variable_set('pdfparser_public_key_path', $public_key_path);
-  if (!is_dir($public_key_path)) {
-    mkdir($public_key_path, 0777);
+  if (!is_dir($public_uri . $public_key_path)) {
+    mkdir($public_uri . $public_key_path, 0777);
   }
 
   $parsed_pdf_path = $main_path . 'parsed_pdfs/';
   variable_set('pdfparser_parsed_pdf_path', $parsed_pdf_path);
-  if (!is_dir($parsed_pdf_path)) {
-    mkdir($parsed_pdf_path, 0777);
+  if (!is_dir($public_uri . $parsed_pdf_path)) {
+    mkdir($public_uri . $parsed_pdf_path, 0777);
   }
 
   // generating keys
@@ -85,14 +95,22 @@ function pdfparser_install() {
   $public_key = openssl_pkey_get_details($res);
   $public_key = $public_key['key'];
   variable_set('pdfparser_private_key', $private_key);
-  file_put_contents($public_key_path . 'public_key', $public_key);
+  file_put_contents($public_uri . $public_key_path . 'public_key', $public_key);
 }
 
 function pdfparser_uninstall() {
   drupal_uninstall_schema('pdfparser_journal');
   drupal_uninstall_schema('pdfparser_authors');
   $path = variable_get('pdfparser_main_path');
-  _rrmdir($path);
+  $public_uri = FALSE;
+  if ($wrapper = file_stream_wrapper_get_instance_by_uri('public://')) {
+    $public_uri = $wrapper->realpath();
+  }
+  if ($public_uri === FALSE) {
+    drupal_set_message(t('Error at PDF Parser uninstallation. Public URI is FALSE.'), 'error');
+    return;
+  }
+  _rrmdir($public_uri . $path);
   variable_del('pdfparser_main_path');
   variable_del('pdfparser_pdf_path');
   variable_del('pdfparser_parsed_pdf_path');
