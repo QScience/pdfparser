@@ -61,7 +61,7 @@ function pdfparser_parsedlist() {
 }
 
 function _pdfparser_get_public_path() {
-  $public_uri = 'public://';
+  $public_uri = FALSE;
   if ($wrapper = file_stream_wrapper_get_instance_by_uri('public://')) {
     $public_uri = $wrapper->realpath();
   }
@@ -74,7 +74,7 @@ function pdfparser_settings() {
 }
 
 function pdfparser_form_paper_node_form_alter(&$form, &$form_state, $form_id) {
-  //drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
+  drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
   
   $lang = $form['field_paper_upload']['#language'];
   $desc = $form['field_paper_upload'][$lang][0]['#description'];
@@ -178,7 +178,8 @@ function send_pdf_to_server($file) {
   if (isset($ret->result)) {
     if ($ret->result === 0) {
       drupal_set_message(t('PDF parsed successfully at remote server.'));
-      pdfparser_store_xml($ret->xml_name, base64_decode($ret->xml_citations), base64_decode($ret->xml_header), $content_length);
+      pdfparser_store_xml($ret->xml_name, base64_decode($ret->xml_citations), base64_decode($ret->xml_header),
+              base64_decode($ret->authors), $content_length);
       //drupal_set_message(t('Time of parsing: :time seconds', array(':time' => number_format($ret->ellapse, 2, ',', ''))));
       //drupal_set_message(t('Time of total process :time seconds', array(':time' => number_format($total_process_time, 2, ',', ''))));
     }
@@ -200,11 +201,11 @@ function send_pdf_to_server($file) {
   else {
     drupal_set_message(t("Unrecognized message from server.
       Please check again your server's URL at $pdf_parser_link menu."), 'error');
-    dvm($ret_pure);
+    drupal_set_message($ret_pure, 'error');
   }
 }
 
-function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $pdf_filesize) {
+function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $authors, $pdf_filesize) {
   _save_file($xml_name, $xml_citations, 'citations');
   _save_file($xml_name, $xml_citations, 'header');
   //pdfparser_push_to_db($xml_name, $xml_content);
@@ -215,6 +216,8 @@ function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $pdf_filesi
   $obj->authors = array();
   $obj->citations = array();
   $obj->abstract = FALSE;
+  $obj->authors = explode("\n", $authors);
+
   $citation_num = -1;
   pdfparser_xml_to_array(new SimpleXMLElement($xml_citations), $obj, $tags_to_collect, 0, FALSE, $citation_num);
   pdfparser_xml_to_array(new SimpleXMLElement($xml_header), $obj, $tags_to_collect, 0, FALSE, $citation_num);
@@ -250,9 +253,10 @@ function _save_file($file_name, $xml, $type) {
   if (strlen($xml) === 0) {
     return;
   }
+
   $public = _pdfparser_get_public_path();
   $parsed_path = $public . variable_get('pdfparser_parsed_pdf_path');
-  
+  //dvm($parsed_path);
   if (is_dir($parsed_path)) {
     $f = fopen($parsed_path . $file_name . '.' . $type, 'w');
     if ($f === FALSE) {
@@ -406,9 +410,6 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
       if ($node_name == 'title') {
         $obj->title = (string)$xml;
       }
-      elseif ($node_name == 'author') {
-        $obj->authors[] = (string)$xml;
-      }
       elseif ($node_name == 'abstract') {
         if ($obj->abstract === FALSE || strlen((string)$xml) > $obj->abstract) {
           $obj->abstract = (string)$xml;
@@ -418,8 +419,6 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
     else {
       if (!isset($obj->citations[$citation_num]) && ($node_name == 'author' || $node_name == 'title')) {
         $obj->citations[$citation_num] = new stdClass();
-        //$obj->citations[$citation_num]->authors = array();
-        //$obj->citations[$citation_num]->title = FALSE;
       }
       if ($node_name == 'author') {
         $obj->citations[$citation_num]->authors[] = (string)$xml;
