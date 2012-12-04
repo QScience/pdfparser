@@ -117,6 +117,7 @@ function pdfparser_settings_form_submit($form_id, &$form_values) {
   variable_set('pdfparser_server_url', $url);
   $post = new stdClass();
   $post->func = 'set_public_key';
+  $post->ip = $_SERVER['SERVER_ADDR'];
   $file = $public . variable_get('pdfparser_public_key_path') . 'public_key';
 
   $ret_pure = do_post_request($url, json_encode($post), basename($file), $file);
@@ -167,6 +168,7 @@ function send_pdf_to_server($file) {
   }
   $post = array(
     'signature' => $signature,
+    'ip' => $_SERVER['SERVER_ADDR'],
   );
 
   $url = variable_get('pdfparser_server_url');
