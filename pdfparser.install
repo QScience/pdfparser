@@ -60,7 +60,7 @@ function pdfparser_install() {
     $public_uri = $wrapper->realpath();
   }
   if ($public_uri === FALSE) {
-    drupal_set_message(t('Error at PDF Parser installation. Public URI is FALSE.'), 'error');
+    drupal_set_message(st('Error at PDF Parser installation. Public URI is FALSE.'), 'error');
     return;
   }
 

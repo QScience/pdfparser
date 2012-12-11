@@ -38,7 +38,7 @@ function pdfparser_menu() {
     'access arguments' => array(TRUE),
     'weight' => -8,
   );
-  
+
   return $items;
 }
 
@@ -86,7 +86,7 @@ function pdfparser_form_paper_node_form_alter(&$form, &$form_state, $form_id) {
 //      ),
 //      'setting');
   drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
-  
+
   $lang = $form['field_paper_upload']['#language'];
   $desc = $form['field_paper_upload'][$lang][0]['#description'];
   $desc = explode("<br />", $desc);
@@ -112,7 +112,7 @@ function pdfparser_settings_form() {
 function pdfparser_settings_form_validate($form_id, &$form_values) {
   $url = $form_values['input']['server_url'];
   $file_headers = @get_headers($url);
-  if($file_headers === FALSE || $file_headers[0] == 'HTTP/1.1 404 Not Found') {
+  if ($file_headers === FALSE || $file_headers[0] == 'HTTP/1.1 404 Not Found') {
     form_set_error('server_url', t('Invalid url, please check again.'));
   }
 }
@@ -181,7 +181,7 @@ function send_pdf_to_server($file) {
       //drupal_set_message(t('Time of total process :time seconds', array(':time' => number_format($total_process_time, 2, ',', ''))));
     }
     elseif ($ret->result === 1) {
-      drupal_set_message(t("Incorrect public key. Please upload your public key again from $pdf_parser_link menu."),
+      drupal_set_message(t("Incorrect public key. Please upload your public key again from %pdf_parser_link menu.", array('%pdf_parser_link' => l('PDFparser settings', 'admin/pdfparser'))),
       'error');
     }
     elseif ($ret->result === 2) {
@@ -189,16 +189,16 @@ function send_pdf_to_server($file) {
     }
     elseif ($ret->result === 3) {
       drupal_set_message(t("There is no public key uploaded from your server yet.
-        Please upload it from $pdf_parser_link menu."), 'error');
+        Please upload it from %pdf_parser_link menu.", array('%pdf_parser_link' => l('PDFparser settings', 'admin/pdfparser'))), 'error');
     }
     else {
-      drupal_set_message(t("Unkown error. Please upload your public key again from $pdf_parser_link menu."), 'error');
+      drupal_set_message(t("Unkown error. Please upload your public key again from %pdf_parser_link menu.", array('%pdf_parser_link' => l('PDFparser settings', 'admin/pdfparser'))), 'error');
     }
   }
   else {
     drupal_set_message(t("Unrecognized message from server.
-      Please check again your server's URL at $pdf_parser_link menu."), 'error');
-    drupal_set_message($ret_pure, 'error');
+      Please check again your server's URL at %pdf_parser_link menu.", array('%pdf_parser_link' => l('PDFparser settings', 'admin/pdfparser'))), 'error');
+    drupal_set_message(t("%pure_data", array('%pure_data' => $ret_pure)), 'error');
   }
 }
 
@@ -222,16 +222,17 @@ function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $authors, $
   for ($i = 0; $i < count($obj->citations); ) {
     if (!isset($obj->citations[$i]->title)) {
       array_splice($obj->citations, $i, 1);
-    } else {
+    }
+    else {
       $i++;
     }
   }
-  
+
   pdfparser_change_paper_upload_form_content_with_js($obj);
 }
 
 function _save_file($file_name, $xml, $type) {
-  if (strlen($xml) === 0) {
+  if (drupal_strlen($xml) === 0) {
     return;
   }
 
@@ -242,7 +243,7 @@ function _save_file($file_name, $xml, $type) {
     $f = fopen($parsed_path . $file_name . '.' . $type, 'w');
     if ($f === FALSE) {
       drupal_set_message(t('Failed to save the result file. The permission on the folder to save to is: :perm. Please check the folder and change the permission in order to save the result files.',
-        array(':perm' => substr(sprintf('%o', fileperms($parsed_path)), -4))), 'error');
+        array(':perm' => drupal_substr(sprintf('%o', fileperms($parsed_path)), -4))), 'error');
     }
     else {
       fwrite($f, $xml);
@@ -257,7 +258,7 @@ function _save_file($file_name, $xml, $type) {
 
 /**
  * This function (or a function like this) should handle the parser result.
- * @param type $obj 
+ * @param type $obj
  */
 function pdfparser_change_paper_upload_form_content_with_js($obj) {
   drupal_add_js(
@@ -278,7 +279,7 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
   if ($node_name == 'citationList') {
     $citation = TRUE;
   }
-  
+
   if ($citation) {
     if ($node_name == 'citation') {
       $citation_num++;
@@ -290,7 +291,7 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
         $obj->title = (string)$xml;
       }
       elseif ($node_name == 'abstract') {
-        if ($obj->abstract === FALSE || strlen((string)$xml) > $obj->abstract) {
+        if ($obj->abstract === FALSE || drupal_strlen((string)$xml) > $obj->abstract) {
           $obj->abstract = (string)$xml;
         }
       }
@@ -307,7 +308,7 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
       }
     }
   }
-  
+
   foreach ($xml->children() as $ch_name => $ch_node) {
     pdfparser_xml_to_array($ch_node, $obj, $tags_to_collect, $level + 1, $citation, $citation_num);
   }
