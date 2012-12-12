@@ -1,6 +1,6 @@
 name = PDF Parser
 description = Enables PDF parsing.
-dependencies[] = QScience
+dependencies[] = qscience
 
 core = 7.x
 version = 7.x-1.x-dev
