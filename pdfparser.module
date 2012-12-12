@@ -177,8 +177,17 @@ function send_pdf_to_server($file) {
       drupal_set_message(t('PDF parsed successfully at remote server.'));
       pdfparser_store_xml($ret->xml_name, base64_decode($ret->xml_citations), base64_decode($ret->xml_header),
               base64_decode($ret->authors), $content_length);
-      //drupal_set_message(t('Time of parsing: :time seconds', array(':time' => number_format($ret->ellapse, 2, ',', ''))));
-      //drupal_set_message(t('Time of total process :time seconds', array(':time' => number_format($total_process_time, 2, ',', ''))));
+//      drupal_set_message(t("Time of parsing: :time seconds<br/>(all script: :all_script<br/>java: :java sec<br/>perl cit: :pcit sec<br/>perl head :phead sec<br/>python: :python sec)",
+//        array(
+//          ':time' => number_format($total_process_time, 2, ',', ''),
+//          ':all_script' => number_format($ret->ellapse, 2, ',', ''),
+//          ':java' => number_format($ret->javarun, 2, ',', ''),
+//          ':pcit' => number_format($ret->perl_cit, 2, ',', ''),
+//          ':phead' => number_format($ret->perl_head, 2, ',', ''),
+//          ':python' => number_format($ret->python, 2, ',', ''),
+//        )
+//      ));
+//      drupal_set_message(t('Time of total process :time seconds', array(':time' => number_format($total_process_time, 2, ',', ''))));
     }
     elseif ($ret->result === 1) {
       drupal_set_message(t("Incorrect public key. Please upload your public key again from %pdf_parser_link menu.", array('%pdf_parser_link' => l('PDFparser settings', 'admin/pdfparser'))),
