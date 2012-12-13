@@ -80,7 +80,7 @@
 function getCitationAuthorString(authors) {
   var s = '';
   if (authors && authors.length > 0) {
-    s = ' [Authors:'+ authors.join(',') +']';
+    s = ' [Authors: '+ authors.join(', ') +']';
   }
   return s;
 }
