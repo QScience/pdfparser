@@ -190,23 +190,21 @@ function send_pdf_to_server($file) {
 //      drupal_set_message(t('Time of total process :time seconds', array(':time' => number_format($total_process_time, 2, ',', ''))));
     }
     elseif ($ret->result === 1) {
-      drupal_set_message(t("Incorrect public key. Please upload your public key again from %pdf_parser_link menu.", array('%pdf_parser_link' => l('PDFparser settings', 'admin/pdfparser'))),
-      'error');
+      drupal_set_message(t("Incorrect public key. Please upload your public key again from <a href=\"@url\">PDFparser settings</a>.", array('@url' => url('admin/pdfparser'))), 'error');
     }
     elseif ($ret->result === 2) {
       drupal_set_message(t('Error on uploading.'), 'error');
     }
     elseif ($ret->result === 3) {
-      drupal_set_message(t("There is no public key uploaded from your server yet.
-        Please upload it from %pdf_parser_link menu.", array('%pdf_parser_link' => l('PDFparser settings', 'admin/pdfparser'))), 'error');
+      drupal_set_message(t("There is no public key uploaded from your server yet. Please upload it from <a href=\"@url\">PDFparser settings</a>.", array('@url' => url('admin/pdfparser'))), 'error');
     }
     else {
-      drupal_set_message(t("Unkown error. Please upload your public key again from %pdf_parser_link menu.", array('%pdf_parser_link' => l('PDFparser settings', 'admin/pdfparser'))), 'error');
+      drupal_set_message(t("Unkown error. Please upload your public key again from <a href=\"@url\">PDFparser settings</a> menu.", array('@url' => url('admin/pdfparser'))), 'error');
     }
   }
   else {
     drupal_set_message(t("Unrecognized message from server.
-      Please check again your server's URL at %pdf_parser_link menu.", array('%pdf_parser_link' => l('PDFparser settings', 'admin/pdfparser'))), 'error');
+      Please check again your server's URL at <a href=\"@url\">PDFparser settings</a> menu.", array('@url' => url('admin/pdfparser'))), 'error');
     drupal_set_message(t("%pure_data", array('%pure_data' => $ret_pure)), 'error');
   }
 }
