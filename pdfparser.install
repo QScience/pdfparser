@@ -68,25 +68,25 @@ function pdfparser_install() {
   $main_path = '/pdfparser/';
   variable_set('pdfparser_main_path', $main_path);
   if (!is_dir($public_uri . $main_path)) {
-    mkdir($public_uri . $main_path, 0777);
+    drupal_mkdir($public_uri . $main_path, 0777);
   }
 
   $pdf_path = $main_path . 'pdfs/';
   variable_set('pdfparser_pdf_path', $pdf_path);
   if (!is_dir($public_uri . $pdf_path)) {
-    mkdir($public_uri . $pdf_path, 0777);
+    drupal_mkdir($public_uri . $pdf_path, 0777);
   }
 
   $public_key_path = $main_path . 'public_key/';
   variable_set('pdfparser_public_key_path', $public_key_path);
   if (!is_dir($public_uri . $public_key_path)) {
-    mkdir($public_uri . $public_key_path, 0777);
+    drupal_mkdir($public_uri . $public_key_path, 0777);
   }
 
   $parsed_pdf_path = $main_path . 'parsed_pdfs/';
   variable_set('pdfparser_parsed_pdf_path', $parsed_pdf_path);
   if (!is_dir($public_uri . $parsed_pdf_path)) {
-    mkdir($public_uri . $parsed_pdf_path, 0777);
+    drupal_mkdir($public_uri . $parsed_pdf_path, 0777);
   }
 
   // generating keys
