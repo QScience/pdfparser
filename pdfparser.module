@@ -121,12 +121,13 @@ function pdfparser_settings_form_submit($form_id, &$form_values) {
   $public = _pdfparser_get_public_path();
   $url = $form_values['input']['server_url'];
   variable_set('pdfparser_server_url', $url);
+  $file = $public . variable_get('pdfparser_public_key_path') . 'public_key';
   $post = new stdClass();
   $post->func = 'set_public_key';
   $post->ip = $_SERVER['SERVER_ADDR'];
-  $file = $public . variable_get('pdfparser_public_key_path') . 'public_key';
+  $post->public_key = base64_encode(file_get_contents($file));
 
-  $ret_pure = do_post_request($url, json_encode($post), basename($file), $file);
+  $ret_pure = do_post_request2($url, json_encode($post));
   $ret = json_decode($ret_pure);
   $pdf_parser_link = l('PDFparser settings', 'admin/pdfparser');
   if (isset($ret->result)) {
@@ -162,13 +163,16 @@ function send_pdf_to_server($file) {
     dvm('Signaturing failed');
   }
   $post = array(
+    'func' => 'send_pdf_to_parse',
     'signature' => $signature,
     'ip' => $_SERVER['SERVER_ADDR'],
+    'file' => base64_encode($content),
+    'filename' => basename($file)
   );
 
   $url = variable_get('pdfparser_server_url');
   $start = microtime(TRUE);
-  $ret_pure = do_post_request($url, json_encode($post), basename($file), $file);
+  $ret_pure = do_post_request2($url, json_encode($post));
   $total_process_time = microtime(TRUE) - $start;
   $ret = json_decode($ret_pure);
   $pdf_parser_link = l('PDFparser settings', 'admin/pdfparser');
@@ -321,7 +325,7 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
   }
 }
 
-function do_post_request($url, $json, $filename, $filepath) {
+function do_post_request2($url, $json) {
   $data = "";
   $boundary = drupal_substr(md5(rand(0, 32000)), 0, 10);
   // POSTing JSON data
@@ -330,13 +334,6 @@ function do_post_request($url, $json, $filename, $filepath) {
   $data .= 'Content-type: application/json' . "\n\n";
   $data .= $json . "\n";
 
-  // POSTing the pdf data
-  $data .= "--$boundary\n";
-  $file_contents = file_get_contents($filepath);
-  $data .= "Content-Disposition: form-data; name=\"{$filename}\"; filename=\"{$filename}\"\n";
-  $data .= "Content-Type: application/pdf\n";
-  $data .= "Content-Transfer-Encoding: binary\n\n";
-  $data .= $file_contents . "\n";
   $data .= "--$boundary--\n";
 
   // compiling the post request
@@ -358,5 +355,3 @@ function do_post_request($url, $json, $filename, $filepath) {
   }
   return $response;
 }
-
-
