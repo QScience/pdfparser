@@ -73,6 +73,7 @@ function pdfparser_settings() {
 }
 
 function pdfparser_form_paper_node_form_alter(&$form, &$form_state, $form_id) {
+  _pdfparser_paper_node_form_alter($form);
 //  $new_form = true;
 //  if (!empty($form['nid']['#value'])) {
 //    $new_form = false;
@@ -84,13 +85,39 @@ function pdfparser_form_paper_node_form_alter(&$form, &$form_state, $form_id) {
 //        )
 //      ),
 //      'setting');
-  drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
-
-  $lang = $form['field_paper_upload']['#language'];
-  $desc = $form['field_paper_upload'][$lang][0]['#description'];
-  $desc = explode("<br />", $desc);
-  $desc[0] = $desc[0] . ' ' . t('After uploading, the document will be parsed which will try to fill out your fields, so please hold on for a while. This should take only a few seconds.');
-  $form['field_paper_upload'][$lang][0]['#description'] = implode("<br />", $desc);
+//  drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
+//  drupal_add_css(drupal_get_path('module', 'pdfparser') . '/css/pdfparser.css', array('group' => CSS_DEFAULT, 'type' => 'file'));
+//
+//  $lang = $form['field_paper_upload']['#language'];
+//  $desc = $form['field_paper_upload'][$lang][0]['#description'];
+//  $desc = explode("<br />", $desc);
+//  $desc[0] = $desc[0] . ' ' . t('After uploading, the document will be parsed which will try to fill out your fields, so please hold on for a while. This should take only a few seconds.');
+//  $form['field_paper_upload'][$lang][0]['#description'] = implode("<br />", $desc);
+//  
+//  $form['extracted_authors'] = array(
+//    '#type' => 'fieldset',
+//    '#title' => t('Extracted authors'),
+//    '#weight' => '5',
+//    '#attributes' => array(
+//      'class' => array('extracted_authors'),
+//    )
+//  );
+//  
+//  $form['extracted_authors']['author_row']['name'] = array(
+//    '#type' => 'textfield',
+//    '#attributes' => array(
+//      'class' => array('hidden', 'author_name')
+//    )
+//  );
+//  
+//  $form['extracted_authors']['author_row']['remove'] = array(
+//    '#type' => 'button',
+//    '#value' => t('Remove'),
+//    '#attributes' => array(
+//      'class' => array('hidden', 'remove_button')
+//    )
+//  );
+  
 }
 
 function pdfparser_settings_form() {
@@ -371,4 +398,137 @@ function do_post_request2($url, $json) {
     throw new Exception("Problem reading data from $url, $php_errormsg");
   }
   return $response;
+}
+
+function pdfparser_paper_form_validate(&$form, &$form_state) {
+  if (isset($form_state['input']['author_reference'])) {
+    $i = 0;
+    foreach ($form_state['input']['author_reference']['extracted'] as $key => $citation) {
+      if (is_numeric($key)) {
+        $div = array(
+          '#prefix' => '<div class="author_row">',
+          '#suffix' => '</div>'
+        );
+
+        $div['name'] = array(
+          '#type' => 'textfield',
+          '#attributes' => array(
+            'class' => array('author_name')
+          ),
+          '#name' => 'author_reference[extracted]['. $i .'][name]',
+          '#value' => $citation['name'],
+        );
+
+        $div['remove'] = array(
+          '#markup' => '<span class="remove_button">' . t('Edit') . '</span>',
+        );
+        $form['extracted_authors'][] = $div;
+        $i++;
+      }
+    }
+  }
+  
+  if (isset($form_state['input']['citation_reference'])) {
+    $i = 0;
+    foreach ($form_state['input']['citation_reference']['extracted'] as $key => $citation) {
+      if (is_numeric($key)) {
+        $div = array(
+          '#prefix' => '<div class="citation_row">',
+          '#suffix' => '</div>'
+        );
+
+        $div['name'] = array(
+          '#type' => 'textfield',
+          '#attributes' => array(
+            'class' => array('citation')
+          ),
+          '#name' => 'citation_reference[extracted]['. $i .'][name]',
+          '#value' => $citation['name'],
+        );
+
+        $div['remove'] = array(
+          '#markup' => '<span class="remove_button">' . t('Edit') . '</span>',
+        );
+        $form['extracted_citations'][] = $div;
+        $i++;
+      }
+    }
+  }
+  
+}
+
+function pdfparser_node_validate($node, &$form, &$form_state) {
+  if ($node->type === 'paper') {
+    _pdfparser_paper_node_form_alter($form);
+  }
+}
+
+function _pdfparser_paper_node_form_alter(&$form) {
+  drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
+  drupal_add_css(drupal_get_path('module', 'pdfparser') . '/css/pdfparser.css', array('group' => CSS_DEFAULT, 'type' => 'file'));
+
+  $lang = $form['field_paper_upload']['#language'];
+  $desc = $form['field_paper_upload'][$lang][0]['#description'];
+  $desc = explode("<br />", $desc);
+  $desc[0] = $desc[0] . ' ' . t('After uploading, the document will be parsed which will try to fill out your fields, so please hold on for a while. This should take only a few seconds.');
+  $form['field_paper_upload'][$lang][0]['#description'] = implode("<br />", $desc);
+  
+  $form['#validate'][] = 'pdfparser_paper_form_validate';
+  
+  $form['extracted_authors'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Extracted authors'),
+    '#weight' => '5',
+    '#attributes' => array(
+      'class' => array('extracted_authors'),
+    )
+  );
+
+  $div = array(
+    '#prefix' => '<div class="author_row prototype">',
+    '#suffix' => '</div>'
+  );
+  
+  $div['name'] = array(
+    '#type' => 'textfield',
+    '#attributes' => array(
+      'class' => array('author_name')
+    ),
+    '#name' => 'author_reference[extracted][p][name]'
+  );
+  
+  $div['remove'] = array(
+    '#markup' => '<span class="remove_button">' . t('Edit') . '</span>',
+  );
+  
+  $form['extracted_authors'][] = $div;
+  
+  // citations
+  $form['extracted_citations'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Extracted citations'),
+    '#weight' => '6',
+    '#attributes' => array(
+      'class' => array('extracted_citations'),
+    )
+  );
+  
+  $div = array(
+    '#prefix' => '<div class="citation_row prototype">',
+    '#suffix' => '</div>'
+  );
+  
+  $div['name'] = array(
+    '#type' => 'textfield',
+    '#attributes' => array(
+      'class' => array('citation')
+    ),
+    '#name' => 'citation_reference[extracted][p][name]'
+  );
+  
+  $div['remove'] = array(
+    '#markup' => '<span class="remove_button">' . t('Edit') . '</span>',
+  );
+  
+  $form['extracted_citations'][] = $div;
 }
