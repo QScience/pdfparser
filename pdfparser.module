@@ -9,7 +9,6 @@
  *
  */
 
-
 function pdfparser_paper_uploaded($file) {
   send_pdf_to_server($file->destination);
 }
@@ -181,17 +180,17 @@ function send_pdf_to_server($file) {
       drupal_set_message(t('PDF parsed successfully at remote server.'));
       pdfparser_store_xml($ret->xml_name, base64_decode($ret->xml_citations), base64_decode($ret->xml_header),
               base64_decode($ret->authors), $content_length);
-//      drupal_set_message(t("Time of parsing: :time seconds<br/>(all script: :all_script<br/>java: :java sec<br/>perl cit: :pcit sec<br/>perl head :phead sec<br/>python: :python sec)",
-//        array(
-//          ':time' => number_format($total_process_time, 2, ',', ''),
-//          ':all_script' => number_format($ret->ellapse, 2, ',', ''),
-//          ':java' => number_format($ret->javarun, 2, ',', ''),
-//          ':pcit' => number_format($ret->perl_cit, 2, ',', ''),
-//          ':phead' => number_format($ret->perl_head, 2, ',', ''),
-//          ':python' => number_format($ret->python, 2, ',', ''),
-//        )
-//      ));
-//      drupal_set_message(t('Time of total process :time seconds', array(':time' => number_format($total_process_time, 2, ',', ''))));
+      drupal_set_message(t("Time of parsing: :time seconds<br/>(all script: :all_script<br/>java: :java sec<br/>perl cit: :pcit sec<br/>perl head :phead sec<br/>python: :python sec)",
+        array(
+          ':time' => number_format($total_process_time, 2, ',', ''),
+          ':all_script' => number_format($ret->ellapse, 2, ',', ''),
+          ':java' => number_format($ret->javarun, 2, ',', ''),
+          ':pcit' => number_format($ret->perl_cit, 2, ',', ''),
+          ':phead' => number_format($ret->perl_head, 2, ',', ''),
+          ':python' => number_format($ret->python, 2, ',', ''),
+        )
+      ));
+      drupal_set_message(t('Time of total process :time seconds', array(':time' => number_format($total_process_time, 2, ',', ''))));
     }
     elseif ($ret->result === 1) {
       drupal_set_message(t("Incorrect public key. Please upload your public key again from <a href=\"@url\">PDFparser settings</a>.", array('@url' => url('admin/pdfparser'))), 'error');
@@ -214,6 +213,9 @@ function send_pdf_to_server($file) {
 }
 
 function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $authors, $pdf_filesize) {
+  
+  
+  
   _save_file($xml_name, $xml_citations, 'citations');
   _save_file($xml_name, $xml_citations, 'header');
   //pdfparser_push_to_db($xml_name, $xml_content);
@@ -227,8 +229,12 @@ function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $authors, $
   $obj->authors = explode("\n", $authors);
 
   $citation_num = -1;
-  pdfparser_xml_to_array(new SimpleXMLElement($xml_citations), $obj, $tags_to_collect, 0, FALSE, $citation_num);
-  pdfparser_xml_to_array(new SimpleXMLElement($xml_header), $obj, $tags_to_collect, 0, FALSE, $citation_num);
+  
+  $maxAbstractConfidence = 0.0;
+  $maxTitleConfidence = 0.0;
+  
+  pdfparser_xml_to_array(new SimpleXMLElement($xml_citations), $obj, $tags_to_collect, 0, FALSE, $citation_num, $maxAbstractConfidence, $maxTitleConfidence);
+  pdfparser_xml_to_array(new SimpleXMLElement($xml_header), $obj, $tags_to_collect, 0, FALSE, $citation_num, $maxAbstractConfidence, $maxTitleConfidence);
 
   for ($i = 0; $i < count($obj->citations); ) {
     if (!isset($obj->citations[$i]->title)) {
@@ -284,9 +290,16 @@ function pdfparser_change_paper_upload_form_content_with_js($obj) {
     'setting');
 }
 
-function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citation, &$citation_num) {
+function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citation, &$citation_num, &$maxAbstractConfidence, &$maxTitleConfidence) {
   $node_name = $xml->getName();
-
+  
+  $confidence = 0.0;
+  $attr = $xml->attributes();
+  if (isset($attr['confidence'])) {
+    $confidence = (double)$attr['confidence'];
+  }
+  
+  
   if ($node_name == 'citationList') {
     $citation = TRUE;
   }
@@ -299,11 +312,15 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
   if (in_array($node_name, $tags_to_collect)) {
     if ($citation === FALSE) {
       if ($node_name == 'title') {
-        $obj->title = (string)$xml;
+        if ($confidence > $maxTitleConfidence) {
+          $obj->title = (string)$xml;
+          $maxTitleConfidence = $confidence;
+        }
       }
       elseif ($node_name == 'abstract') {
-        if ($obj->abstract === FALSE || drupal_strlen((string)$xml) > $obj->abstract) {
+        if ($confidence > $maxAbstractConfidence) {
           $obj->abstract = (string)$xml;
+          $maxAbstractConfidence = $confidence;
         }
       }
     }
@@ -321,7 +338,7 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
   }
 
   foreach ($xml->children() as $ch_name => $ch_node) {
-    pdfparser_xml_to_array($ch_node, $obj, $tags_to_collect, $level + 1, $citation, $citation_num);
+    pdfparser_xml_to_array($ch_node, $obj, $tags_to_collect, $level + 1, $citation, $citation_num, $maxAbstractConfidence, $maxTitleConfidence);
   }
 }
 
