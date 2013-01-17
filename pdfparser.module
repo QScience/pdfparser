@@ -74,50 +74,6 @@ function pdfparser_settings() {
 
 function pdfparser_form_paper_node_form_alter(&$form, &$form_state, $form_id) {
   _pdfparser_paper_node_form_alter($form);
-//  $new_form = true;
-//  if (!empty($form['nid']['#value'])) {
-//    $new_form = false;
-//  }
-//  drupal_add_js(
-//      array(
-//        'pdfparser' => array(
-//          'new_form' => $new_form,
-//        )
-//      ),
-//      'setting');
-//  drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
-//  drupal_add_css(drupal_get_path('module', 'pdfparser') . '/css/pdfparser.css', array('group' => CSS_DEFAULT, 'type' => 'file'));
-//
-//  $lang = $form['field_paper_upload']['#language'];
-//  $desc = $form['field_paper_upload'][$lang][0]['#description'];
-//  $desc = explode("<br />", $desc);
-//  $desc[0] = $desc[0] . ' ' . t('After uploading, the document will be parsed which will try to fill out your fields, so please hold on for a while. This should take only a few seconds.');
-//  $form['field_paper_upload'][$lang][0]['#description'] = implode("<br />", $desc);
-//  
-//  $form['extracted_authors'] = array(
-//    '#type' => 'fieldset',
-//    '#title' => t('Extracted authors'),
-//    '#weight' => '5',
-//    '#attributes' => array(
-//      'class' => array('extracted_authors'),
-//    )
-//  );
-//  
-//  $form['extracted_authors']['author_row']['name'] = array(
-//    '#type' => 'textfield',
-//    '#attributes' => array(
-//      'class' => array('hidden', 'author_name')
-//    )
-//  );
-//  
-//  $form['extracted_authors']['author_row']['remove'] = array(
-//    '#type' => 'button',
-//    '#value' => t('Remove'),
-//    '#attributes' => array(
-//      'class' => array('hidden', 'remove_button')
-//    )
-//  );
-  
 }
 
 function pdfparser_settings_form() {
@@ -162,7 +118,7 @@ function pdfparser_settings_form_submit($form_id, &$form_values) {
     }
     elseif ($ret->result === 1) {
       drupal_set_message(t('Cannot save public key at server side. Maybe there is no permission to do that.'), 'error');
-      dvm($ret_pure);
+//      dvm($ret_pure);
     }
     else {
       drupal_set_message(t('Invalid server address.'), 'error');
@@ -420,7 +376,7 @@ function pdfparser_paper_form_validate(&$form, &$form_state) {
         );
 
         $div['remove'] = array(
-          '#markup' => '<span class="remove_button">' . t('Edit') . '</span>',
+          '#markup' => '<span class="remove_button author">' . t('Edit') . '</span>',
         );
         $form['extracted_authors'][] = $div;
         $i++;
@@ -447,7 +403,7 @@ function pdfparser_paper_form_validate(&$form, &$form_state) {
         );
 
         $div['remove'] = array(
-          '#markup' => '<span class="remove_button">' . t('Edit') . '</span>',
+          '#markup' => '<span class="remove_button citation">' . t('Edit') . '</span>',
         );
         $form['extracted_citations'][] = $div;
         $i++;
@@ -463,6 +419,40 @@ function pdfparser_node_validate($node, &$form, &$form_state) {
   }
 }
 
+function pdfparser_node_submit($node, $form, &$form_state) {
+//  dvm($node);
+  $language = $form_state['values']['language'];
+  if ($form['#id'] == 'paper-node-form') {
+    if (isset($form_state['input']['author_reference'])) {
+      $i = 0;
+      foreach ($form_state['input']['author_reference']['extracted'] as $key => $author) {
+        if (is_numeric($key)) {
+          $form_state['values']['author_reference'][$language][] = array(
+            'target_id' => array(
+              'title' => $author['name']
+            )
+          );
+        }
+      }
+    }
+    
+    if (isset($form_state['input']['citation_reference'])) {
+      $i = 0;
+      foreach ($form_state['input']['citation_reference']['extracted'] as $key => $citation) {
+        if (is_numeric($key)) {
+          $form_state['values']['citation_reference'][$language][] = array(
+            'target_id' => array(
+              'title' => $citation['name']
+            )
+          );
+        }
+      }
+    }
+  }
+}
+
+//function pdfparser_paper_form_submit()
+
 function _pdfparser_paper_node_form_alter(&$form) {
   drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
   drupal_add_css(drupal_get_path('module', 'pdfparser') . '/css/pdfparser.css', array('group' => CSS_DEFAULT, 'type' => 'file'));
@@ -474,6 +464,7 @@ function _pdfparser_paper_node_form_alter(&$form) {
   $form['field_paper_upload'][$lang][0]['#description'] = implode("<br />", $desc);
   
   $form['#validate'][] = 'pdfparser_paper_form_validate';
+//  $form['#submit'][] = 'pdfparser_paper_form_submit';
   
   $form['extracted_authors'] = array(
     '#type' => 'fieldset',
@@ -498,7 +489,7 @@ function _pdfparser_paper_node_form_alter(&$form) {
   );
   
   $div['remove'] = array(
-    '#markup' => '<span class="remove_button">' . t('Edit') . '</span>',
+    '#markup' => '<span class="remove_button author">' . t('Edit') . '</span>',
   );
   
   $form['extracted_authors'][] = $div;
@@ -527,7 +518,7 @@ function _pdfparser_paper_node_form_alter(&$form) {
   );
   
   $div['remove'] = array(
-    '#markup' => '<span class="remove_button">' . t('Edit') . '</span>',
+    '#markup' => '<span class="remove_button citation">' . t('Edit') . '</span>',
   );
   
   $form['extracted_citations'][] = $div;

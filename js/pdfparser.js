@@ -1,8 +1,38 @@
+var authors_to_edit = new Array();
+var citations_to_edit = new Array();
+var field_num;
+var i;
+
 (function ($) {
+  
+  $(document).ready(function() {
+    $('span.remove_button').live('click', function() {
+      var val = $(this).parent().find('input[type="text"]').val();
+      var type = $(this).hasClass('author') ? 'author' : 'citation';
+      $(this).parent().remove();
+      
+      field_num = $('#'+type+'-reference-values tbody input.form-text').length;
+      var added = false;
+      for (i = 0; i < field_num; i++) {
+        if ($('#'+ type +'-reference-values tbody #edit-'+ type +'-reference-und-'+ i +'-target-id').val().length == 0) {
+          added = true;
+          $('#'+ type +'-reference-values tbody #edit-'+ type +'-reference-und-'+ i +'-target-id').val(val);
+        }
+      }
+      if (!added) {
+        $('input[name="'+type+'_reference_add_more"]').trigger('mousedown');
+        if(type == 'author') {
+          authors_to_edit.push(val);
+        } else if (type == 'citation') {
+          citations_to_edit.push(val);
+        }
+      }
+    });
+  });
+  
   $(document).ajaxComplete(function(e, xhr, settings) {
     if (typeof settings.extraData != 'undefined') {
-      var field_num;
-      var i, j;
+      var i;
       if (settings.extraData._triggering_element_name == 'field_paper_upload_und_0_upload_button') {
         // Removing previous field datas.
         removeFieldValues();
@@ -44,60 +74,38 @@
                 $('fieldset.extracted_citations div.fieldset-wrapper').append(citation_row);
               }
             }
-//            var citations = Drupal.settings.pdfparser.citations;
-//            var citation_num = citations.length;
-//            for (i = 0, j = 0; i < citation_num; j++) {
-//              if (j >= field_num) {
-//                break;
-//              } else {
-//                $('#citation-reference-values tbody #edit-citation-reference-und-'+ j +'-target-id').val(citations[i].title + getCitationAuthorString(citations[i].authors));
-//                Drupal.settings.pdfparser.citations.splice(i, 1);
-//              }
-//            }
-//            if (Drupal.settings.pdfparser.citations.length != 0) {
-//              $('#edit-citation-reference-und-add-more').trigger('mousedown');
-//            }
           }
         }
       } else if (settings.extraData._triggering_element_name == 'field_paper_upload_und_0_remove_button') {
         removeFieldValues();
         $('#edit-field-paper-upload div.messages').slideUp(400);
       } else if (settings.extraData._triggering_element_name == 'author_reference_add_more') {
-//        if (Drupal.settings && Drupal.settings.pdfparser) {
-//          if (Drupal.settings.pdfparser.authors && Drupal.settings.pdfparser.authors.length > 0) {
-//            field_num = $('#author-reference-values tbody input.form-text').length;
-//            $('#author-reference-values tbody #edit-author-reference-und-'+ (field_num - 1) +'-target-id').val(Drupal.settings.pdfparser.authors[0]);
-//            Drupal.settings.pdfparser.authors.splice(0, 1);
-//            if (Drupal.settings.pdfparser.authors.length != 0) {
-//              $('#edit-author-reference-und-add-more').trigger('mousedown');
-//            }
-//          }
-//        }
+        if (authors_to_edit.length != 0) {
+          field_num = $('#author-reference-values tbody input.form-text').length;
+          $('#author-reference-values tbody #edit-author-reference-und-'+ (field_num - 1) +'-target-id').val(authors_to_edit[0]);
+          authors_to_edit.splice(0, 1);
+          if (authors_to_edit.length != 0) {
+            $('input[name="author_reference_add_more"]').trigger('mousedown');
+          }
+        }
       } else if (settings.extraData._triggering_element_name == 'citation_reference_add_more') {
-//        if (Drupal.settings && Drupal.settings.pdfparser) {
-//          if (Drupal.settings.pdfparser.citations && Drupal.settings.pdfparser.citations.length > 0) {
-//            field_num = $('#citation-reference-values tbody input.form-text').length;
-//            $('#citation-reference-values tbody #edit-citation-reference-und-'+ (field_num - 1) +'-target-id').val(
-//                    Drupal.settings.pdfparser.citations[0].title + getCitationAuthorString(Drupal.settings.pdfparser.citations[0].authors));
-//            Drupal.settings.pdfparser.citations.splice(0, 1);
-//            if (Drupal.settings.pdfparser.citations.length != 0) {
-//              $('#edit-citation-reference-und-add-more').trigger('mousedown');
-//            }
-//          }
-//        }
+        if (citations_to_edit.length != 0) {
+          field_num = $('#citation-reference-values tbody input.form-text').length;
+          $('#citation-reference-values tbody #edit-citation-reference-und-'+ (field_num - 1) +'-target-id').val(citations_to_edit[0]);
+          citations_to_edit.splice(0, 1);
+          if (citations_to_edit.length != 0) {
+            $('input[name="citation_reference_add_more"]').trigger('mousedown');
+          }
+        }
       }
     }
   });
   
   function removeFieldValues() {
-    var field_num;
     $('#edit-title').val('');
     $('#edit-abstract-und-0-value').val('');
     $('fieldset.extracted_authors div.author_row').not('.prototype').remove();
-    field_num = $('#citation-reference-values tbody input.form-text').length;
-    for (i = 0; i < field_num; i++) {
-      $('#citation-reference-values tbody #edit-citation-reference-und-'+ i +'-target-id').val('');
-    }
+    $('fieldset.extracted_citations div.citation_row').not('.prototype').remove();
   }
   
 })(jQuery);
