@@ -14,18 +14,24 @@ var i;
       field_num = $('#'+type+'-reference-values tbody input.form-text').length;
       var added = false;
       for (i = 0; i < field_num; i++) {
-        if ($('#'+ type +'-reference-values tbody #edit-'+ type +'-reference-und-'+ i +'-target-id').val().length == 0) {
+        if ($('#'+ type +'-reference-values tbody input.form-text:eq('+ i +')').val().length == 0) {
           added = true;
-          $('#'+ type +'-reference-values tbody #edit-'+ type +'-reference-und-'+ i +'-target-id').val(val);
+          $('#'+ type +'-reference-values tbody input.form-text:eq('+ i +')').val(val);
+//          console.log('setting value...' + val);
+//          console.log('#'+ type +'-reference-values tbody #edit-'+ type +'-reference-und-'+ i +'-target-id');
+          break;
         }
       }
       if (!added) {
+//        console.log('not added');
         $('input[name="'+type+'_reference_add_more"]').trigger('mousedown');
         if(type == 'author') {
           authors_to_edit.push(val);
         } else if (type == 'citation') {
           citations_to_edit.push(val);
         }
+      } else {
+//        console.log('already added...somewhere....');
       }
     });
   });
@@ -82,7 +88,7 @@ var i;
       } else if (settings.extraData._triggering_element_name == 'author_reference_add_more') {
         if (authors_to_edit.length != 0) {
           field_num = $('#author-reference-values tbody input.form-text').length;
-          $('#author-reference-values tbody #edit-author-reference-und-'+ (field_num - 1) +'-target-id').val(authors_to_edit[0]);
+          $('#author-reference-values tbody input.form-text:eq('+ (field_num - 1) +')').val(authors_to_edit[0]);
           authors_to_edit.splice(0, 1);
           if (authors_to_edit.length != 0) {
             $('input[name="author_reference_add_more"]').trigger('mousedown');
@@ -91,7 +97,7 @@ var i;
       } else if (settings.extraData._triggering_element_name == 'citation_reference_add_more') {
         if (citations_to_edit.length != 0) {
           field_num = $('#citation-reference-values tbody input.form-text').length;
-          $('#citation-reference-values tbody #edit-citation-reference-und-'+ (field_num - 1) +'-target-id').val(citations_to_edit[0]);
+          $('#citation-reference-values tbody input.form-text:eq('+ (field_num - 1) +')').val(citations_to_edit[0]);
           citations_to_edit.splice(0, 1);
           if (citations_to_edit.length != 0) {
             $('input[name="citation_reference_add_more"]').trigger('mousedown');
@@ -106,8 +112,17 @@ var i;
     $('#edit-abstract-und-0-value').val('');
     $('fieldset.extracted_authors div.author_row').not('.prototype').remove();
     $('fieldset.extracted_citations div.citation_row').not('.prototype').remove();
+    
+    var types = ['author', 'citation'];
+    
+    for (var type in types) {
+      var t = types[type];
+      field_num = $('#'+ t +'-reference-values tbody input.form-text').length;
+      for (i = 0; i < field_num; i++) {
+        $('#'+ t +'-reference-values div.form-type-checkbox input.form-checkbox:eq('+ i +')').trigger('change');
+      }
+    }
   }
-  
 })(jQuery);
 
 
