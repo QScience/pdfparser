@@ -119,7 +119,10 @@ var i;
       var t = types[type];
       field_num = $('#'+ t +'-reference-values tbody input.form-text').length;
       for (i = 0; i < field_num; i++) {
-        $('#'+ t +'-reference-values div.form-type-checkbox input.form-checkbox:eq('+ i +')').trigger('change');
+        $('#'+ t +'-reference-values tbody input.form-text:eq('+ i +')').val('');
+        if (i > 0) {
+          $('#'+ t +'-reference-values div.form-type-checkbox input.form-checkbox:eq('+ i +')').trigger('change');
+        }
       }
     }
   }
