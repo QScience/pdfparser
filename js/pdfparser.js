@@ -81,6 +81,7 @@ var i;
               }
             }
           }
+          delete Drupal.settings.pdfparser;
         }
       } else if (settings.extraData._triggering_element_name == 'field_paper_upload_und_0_remove_button') {
         removeFieldValues();
