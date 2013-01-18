@@ -369,7 +369,8 @@ function pdfparser_paper_form_validate(&$form, &$form_state) {
         $div['name'] = array(
           '#type' => 'textfield',
           '#attributes' => array(
-            'class' => array('author_name')
+            'class' => array('author_name'),
+            'readonly' => 'readonly',
           ),
           '#name' => 'author_reference[extracted]['. $i .'][name]',
           '#value' => $citation['name'],
@@ -396,7 +397,8 @@ function pdfparser_paper_form_validate(&$form, &$form_state) {
         $div['name'] = array(
           '#type' => 'textfield',
           '#attributes' => array(
-            'class' => array('citation')
+            'class' => array('citation'),
+            'readonly' => 'readonly',
           ),
           '#name' => 'citation_reference[extracted]['. $i .'][name]',
           '#value' => $citation['name'],
@@ -469,7 +471,7 @@ function _pdfparser_paper_node_form_alter(&$form) {
   $form['extracted_authors'] = array(
     '#type' => 'fieldset',
     '#title' => t('Extracted authors'),
-    '#weight' => '5',
+    '#weight' => 4,
     '#attributes' => array(
       'class' => array('extracted_authors'),
     )
@@ -483,7 +485,8 @@ function _pdfparser_paper_node_form_alter(&$form) {
   $div['name'] = array(
     '#type' => 'textfield',
     '#attributes' => array(
-      'class' => array('author_name')
+      'class' => array('author_name'),
+      'readonly' => 'readonly',
     ),
     '#name' => 'author_reference[extracted][p][name]'
   );
@@ -498,7 +501,7 @@ function _pdfparser_paper_node_form_alter(&$form) {
   $form['extracted_citations'] = array(
     '#type' => 'fieldset',
     '#title' => t('Extracted citations'),
-    '#weight' => '6',
+    '#weight' => 9,
     '#attributes' => array(
       'class' => array('extracted_citations'),
     )
@@ -512,7 +515,8 @@ function _pdfparser_paper_node_form_alter(&$form) {
   $div['name'] = array(
     '#type' => 'textfield',
     '#attributes' => array(
-      'class' => array('citation')
+      'class' => array('citation'),
+      'readonly' => 'readonly',
     ),
     '#name' => 'citation_reference[extracted][p][name]'
   );
