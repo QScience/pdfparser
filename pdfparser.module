@@ -127,7 +127,7 @@ function pdfparser_settings_form_submit($form_id, &$form_values) {
   else {
     drupal_set_message(t("Unrecognized message from server.
       Please check again your server's URL at $pdf_parser_link menu."), 'error');
-    dvm($ret_pure);
+    drupal_set_message($ret_pure, 'error');
   }
 }
 
@@ -142,7 +142,7 @@ function send_pdf_to_server($file) {
     $signature = base64_encode($crypted_hash);
   }
   else {
-    dvm('Signaturing failed');
+    drupal_set_message(t('Signaturing failed'), 'error');
   }
   $post = array(
     'func' => 'send_pdf_to_parse',
@@ -197,8 +197,6 @@ function send_pdf_to_server($file) {
 
 function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $authors, $pdf_filesize) {
   
-  
-  
   _save_file($xml_name, $xml_citations, 'citations');
   _save_file($xml_name, $xml_citations, 'header');
   //pdfparser_push_to_db($xml_name, $xml_content);
@@ -222,6 +220,15 @@ function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $authors, $
   for ($i = 0; $i < count($obj->citations); ) {
     if (!isset($obj->citations[$i]->title)) {
       array_splice($obj->citations, $i, 1);
+    }
+    else {
+      $i++;
+    }
+  }
+  
+  for ($i = 0; $i < count($obj->authors); ) {
+    if (strlen(trim($obj->authors[$i])) == 0) {
+      array_splice($obj->authors, $i, 1);
     }
     else {
       $i++;
@@ -501,7 +508,7 @@ function _pdfparser_paper_node_form_alter(&$form) {
   $form['extracted_citations'] = array(
     '#type' => 'fieldset',
     '#title' => t('Extracted citations'),
-    '#weight' => 9,
+    '#weight' => 8,
     '#attributes' => array(
       'class' => array('extracted_citations'),
     )
