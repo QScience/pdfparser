@@ -38,8 +38,10 @@ var i;
   
   $(document).ajaxComplete(function(e, xhr, settings) {
     if (typeof settings.extraData != 'undefined') {
+      console.log(settings);
       var i;
-      if (settings.extraData._triggering_element_name == 'field_paper_upload_und_0_upload_button') {
+      if (settings.extraData._triggering_element_name == 'field_paper_upload_und_0_upload_button'
+              || settings.extraData._triggering_element_name == 'field_paper_upload_und_0_transfer') {
         // Removing previous field datas.
         removeFieldValues();
         

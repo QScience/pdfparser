@@ -163,16 +163,16 @@ function send_pdf_to_server($file) {
       drupal_set_message(t('PDF parsed successfully at remote server.'));
       pdfparser_store_xml($ret->xml_name, base64_decode($ret->xml_citations), base64_decode($ret->xml_header),
               base64_decode($ret->authors), $content_length);
-      drupal_set_message(t("Time of parsing: :time seconds<br/>(all script: :all_script<br/>java: :java sec<br/>perl cit: :pcit sec<br/>perl head :phead sec<br/>python: :python sec)",
-        array(
-          ':time' => number_format($total_process_time, 2, ',', ''),
-          ':all_script' => number_format($ret->ellapse, 2, ',', ''),
-          ':java' => number_format($ret->javarun, 2, ',', ''),
-          ':pcit' => number_format($ret->perl_cit, 2, ',', ''),
-          ':phead' => number_format($ret->perl_head, 2, ',', ''),
-          ':python' => number_format($ret->python, 2, ',', ''),
-        )
-      ));
+//      drupal_set_message(t("Time of parsing: :time seconds<br/>(all script: :all_script<br/>java: :java sec<br/>perl cit: :pcit sec<br/>perl head :phead sec<br/>python: :python sec)",
+//        array(
+//          ':time' => number_format($total_process_time, 2, ',', ''),
+//          ':all_script' => number_format($ret->ellapse, 2, ',', ''),
+//          ':java' => number_format($ret->javarun, 2, ',', ''),
+//          ':pcit' => number_format($ret->perl_cit, 2, ',', ''),
+//          ':phead' => number_format($ret->perl_head, 2, ',', ''),
+//          ':python' => number_format($ret->python, 2, ',', ''),
+//        )
+//      ));
       drupal_set_message(t('Time of total process :time seconds', array(':time' => number_format($total_process_time, 2, ',', ''))));
     }
     elseif ($ret->result === 1) {
@@ -196,7 +196,7 @@ function send_pdf_to_server($file) {
 }
 
 function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $authors, $pdf_filesize) {
-  
+
   _save_file($xml_name, $xml_citations, 'citations');
   _save_file($xml_name, $xml_citations, 'header');
   //pdfparser_push_to_db($xml_name, $xml_content);
@@ -210,10 +210,10 @@ function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $authors, $
   $obj->authors = explode("\n", $authors);
 
   $citation_num = -1;
-  
+
   $maxAbstractConfidence = 0.0;
   $maxTitleConfidence = 0.0;
-  
+
   pdfparser_xml_to_array(new SimpleXMLElement($xml_citations), $obj, $tags_to_collect, 0, FALSE, $citation_num, $maxAbstractConfidence, $maxTitleConfidence);
   pdfparser_xml_to_array(new SimpleXMLElement($xml_header), $obj, $tags_to_collect, 0, FALSE, $citation_num, $maxAbstractConfidence, $maxTitleConfidence);
 
@@ -225,9 +225,9 @@ function pdfparser_store_xml($xml_name, $xml_citations, $xml_header, $authors, $
       $i++;
     }
   }
-  
+
   for ($i = 0; $i < count($obj->authors); ) {
-    if (strlen(trim($obj->authors[$i])) == 0) {
+    if (drupal_strlen(trim($obj->authors[$i])) == 0) {
       array_splice($obj->authors, $i, 1);
     }
     else {
@@ -268,13 +268,16 @@ function _save_file($file_name, $xml, $type) {
  * @param type $obj
  */
 function pdfparser_change_paper_upload_form_content_with_js($obj) {
+  global $language;
+  
   drupal_add_js(
     array(
       'pdfparser' => array(
         'title' => $obj->title,
         'abstr' => $obj->abstract,
         'authors' => $obj->authors,
-        'citations' => $obj->citations,
+        'citations' => $obj->citations
+        
       )
     ),
     'setting');
@@ -282,14 +285,14 @@ function pdfparser_change_paper_upload_form_content_with_js($obj) {
 
 function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citation, &$citation_num, &$maxAbstractConfidence, &$maxTitleConfidence) {
   $node_name = $xml->getName();
-  
+
   $confidence = 0.0;
   $attr = $xml->attributes();
   if (isset($attr['confidence'])) {
     $confidence = (double)$attr['confidence'];
   }
-  
-  
+
+
   if ($node_name == 'citationList') {
     $citation = TRUE;
   }
@@ -379,7 +382,7 @@ function pdfparser_paper_form_validate(&$form, &$form_state) {
             'class' => array('author_name'),
             'readonly' => 'readonly',
           ),
-          '#name' => 'author_reference[extracted]['. $i .'][name]',
+          '#name' => 'author_reference[extracted][' . $i . '][name]',
           '#value' => $citation['name'],
         );
 
@@ -391,7 +394,7 @@ function pdfparser_paper_form_validate(&$form, &$form_state) {
       }
     }
   }
-  
+
   if (isset($form_state['input']['citation_reference'])) {
     $i = 0;
     foreach ($form_state['input']['citation_reference']['extracted'] as $key => $citation) {
@@ -407,7 +410,7 @@ function pdfparser_paper_form_validate(&$form, &$form_state) {
             'class' => array('citation'),
             'readonly' => 'readonly',
           ),
-          '#name' => 'citation_reference[extracted]['. $i .'][name]',
+          '#name' => 'citation_reference[extracted][' . $i . '][name]',
           '#value' => $citation['name'],
         );
 
@@ -419,7 +422,6 @@ function pdfparser_paper_form_validate(&$form, &$form_state) {
       }
     }
   }
-  
 }
 
 function pdfparser_node_validate($node, &$form, &$form_state) {
@@ -444,7 +446,7 @@ function pdfparser_node_submit($node, $form, &$form_state) {
         }
       }
     }
-    
+
     if (isset($form_state['input']['citation_reference'])) {
       $i = 0;
       foreach ($form_state['input']['citation_reference']['extracted'] as $key => $citation) {
@@ -460,8 +462,6 @@ function pdfparser_node_submit($node, $form, &$form_state) {
   }
 }
 
-//function pdfparser_paper_form_submit()
-
 function _pdfparser_paper_node_form_alter(&$form) {
   drupal_add_js(drupal_get_path('module', 'pdfparser') . '/js/pdfparser.js', 'file');
   drupal_add_css(drupal_get_path('module', 'pdfparser') . '/css/pdfparser.css', array('group' => CSS_DEFAULT, 'type' => 'file'));
@@ -471,10 +471,10 @@ function _pdfparser_paper_node_form_alter(&$form) {
   $desc = explode("<br />", $desc);
   $desc[0] = $desc[0] . ' ' . t('After uploading, the document will be parsed which will try to fill out your fields, so please hold on for a while. This should take only a few seconds.');
   $form['field_paper_upload'][$lang][0]['#description'] = implode("<br />", $desc);
-  
+
   $form['#validate'][] = 'pdfparser_paper_form_validate';
 //  $form['#submit'][] = 'pdfparser_paper_form_submit';
-  
+
   $form['extracted_authors'] = array(
     '#type' => 'fieldset',
     '#title' => t('Extracted authors'),
@@ -488,7 +488,7 @@ function _pdfparser_paper_node_form_alter(&$form) {
     '#prefix' => '<div class="author_row prototype">',
     '#suffix' => '</div>'
   );
-  
+
   $div['name'] = array(
     '#type' => 'textfield',
     '#attributes' => array(
@@ -497,13 +497,13 @@ function _pdfparser_paper_node_form_alter(&$form) {
     ),
     '#name' => 'author_reference[extracted][p][name]'
   );
-  
+
   $div['remove'] = array(
     '#markup' => '<span class="remove_button author">' . t('Edit') . '</span>',
   );
-  
+
   $form['extracted_authors'][] = $div;
-  
+
   // citations
   $form['extracted_citations'] = array(
     '#type' => 'fieldset',
@@ -513,12 +513,12 @@ function _pdfparser_paper_node_form_alter(&$form) {
       'class' => array('extracted_citations'),
     )
   );
-  
+
   $div = array(
     '#prefix' => '<div class="citation_row prototype">',
     '#suffix' => '</div>'
   );
-  
+
   $div['name'] = array(
     '#type' => 'textfield',
     '#attributes' => array(
@@ -527,10 +527,10 @@ function _pdfparser_paper_node_form_alter(&$form) {
     ),
     '#name' => 'citation_reference[extracted][p][name]'
   );
-  
+
   $div['remove'] = array(
     '#markup' => '<span class="remove_button citation">' . t('Edit') . '</span>',
   );
-  
+
   $form['extracted_citations'][] = $div;
 }
