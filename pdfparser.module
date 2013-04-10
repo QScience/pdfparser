@@ -251,10 +251,11 @@ function _save_file($file_name, $xml, $type) {
     if ($f === FALSE) {
       drupal_set_message(
         t(
-          'Unable to save the result file :filename. The permission on the folder to save to is: :perm. Please check the folder and change the permission in order to save the result files.',
+          'Unable to save the result file :filename. The permission on folder :folder is: :perm. Please check the folder and change the permission in order to save the result files.',
           array(
             ':perm' => drupal_substr(sprintf('%o', fileperms($parsed_path)), -4),
             ':filename' => $file_name . '.' . $type,
+            ':folder' => $parsed_path,
           )
         ),
         'error'
