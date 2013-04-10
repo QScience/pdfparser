@@ -247,10 +247,18 @@ function _save_file($file_name, $xml, $type) {
   $parsed_path = $public . variable_get('pdfparser_parsed_pdf_path');
   //dvm($parsed_path);
   if (is_dir($parsed_path)) {
-    $f = fopen($parsed_path . $file_name . '.' . $type, 'w');
+    $f = @fopen($parsed_path . $file_name . '.' . $type, 'w');
     if ($f === FALSE) {
-      drupal_set_message(t('Failed to save the result file. The permission on the folder to save to is: :perm. Please check the folder and change the permission in order to save the result files.',
-        array(':perm' => drupal_substr(sprintf('%o', fileperms($parsed_path)), -4))), 'error');
+      drupal_set_message(
+        t(
+          'Unable to save the result file :filename. The permission on the folder to save to is: :perm. Please check the folder and change the permission in order to save the result files.',
+          array(
+            ':perm' => drupal_substr(sprintf('%o', fileperms($parsed_path)), -4),
+            ':filename' => $file_name . '.' . $type,
+          )
+        ),
+        'error'
+      );
     }
     else {
       fwrite($f, $xml);
@@ -507,7 +515,7 @@ function _pdfparser_paper_node_form_alter(&$form) {
   // citations
   $form['extracted_citations'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Extracted citations'),
+    '#title' => t('Extracted references'),
     '#weight' => 8,
     '#attributes' => array(
       'class' => array('extracted_citations'),
