@@ -86,7 +86,7 @@ function pdfparser_install() {
   $parsed_pdf_path = $main_path . 'parsed_pdfs/';
   variable_set('pdfparser_parsed_pdf_path', $parsed_pdf_path);
   if (!is_dir($public_uri . $parsed_pdf_path)) {
-    drupal_mkdir($public_uri . $parsed_pdf_path, 0000);
+    drupal_mkdir($public_uri . $parsed_pdf_path, 0777);
   }
 
   // generating keys
