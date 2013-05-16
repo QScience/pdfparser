@@ -120,7 +120,7 @@ function pdfparser_uninstall() {
 }
 
 function _rrmdir($dir) {
-  if (strpos($dir, "/") !== strlen($dir) - 1) {
+  if (strpos($dir, "/") !== drupal_strlen($dir) - 1) {
     $dir .= "/";
   }
   foreach (glob($dir . '*') as $file) {

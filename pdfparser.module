@@ -126,8 +126,8 @@ function pdfparser_settings_form_submit($form_id, &$form_values) {
   }
   else {
     drupal_set_message(t("Unrecognized message from server.
-      Please check again your server's URL at $pdf_parser_link menu."), 'error');
-    drupal_set_message($ret_pure, 'error');
+      Please check again your server's URL at $pdf_parser_link menu ."), 'error');
+    drupal_set_message(check_plain($ret_pure), 'error');
   }
 }
 
@@ -185,7 +185,7 @@ function send_pdf_to_server($file) {
       drupal_set_message(t("There is no public key uploaded from your server yet. Please upload it from <a href=\"@url\">PDFparser settings</a>.", array('@url' => url('admin/pdfparser'))), 'error');
     }
     else {
-      drupal_set_message(t("Unkown error. Please upload your public key again from <a href=\"@url\">PDFparser settings</a> menu.", array('@url' => url('admin/pdfparser'))), 'error');
+      drupal_set_message(t("Unknown error. Please upload your public key again from <a href=\"@url\">PDFparser settings</a> menu.", array('@url' => url('admin/pdfparser'))), 'error');
     }
   }
   else {
