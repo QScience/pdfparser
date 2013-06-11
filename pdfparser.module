@@ -184,6 +184,9 @@ function send_pdf_to_server($file) {
     elseif ($ret->result === 3) {
       drupal_set_message(t("There is no public key uploaded from your server yet. Please upload it from <a href=\"@url\">PDFparser settings</a>.", array('@url' => url('admin/pdfparser'))), 'error');
     }
+    elseif ($ret->result === 5) {
+      drupal_set_message(t("Cannot convert pdf to txt."), 'error');
+    }
     else {
       drupal_set_message(t("Unknown error. Please upload your public key again from <a href=\"@url\">PDFparser settings</a> menu.", array('@url' => url('admin/pdfparser'))), 'error');
     }
