@@ -53,7 +53,7 @@
 //}
 
 function pdfparser_install() {
-  variable_set('pdfparser_server_url', 'http://www.inf.u-szeged.hu/rgai/~kojak/parser_server/');
+  variable_set('pdfparser_server_url', 'http://rgai.inf.u-szeged.hu/~kojak/parser_server/');
   // setting variables, creating folders
   $public_uri = FALSE;
   if ($wrapper = file_stream_wrapper_get_instance_by_uri('public://')) {
