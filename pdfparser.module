@@ -443,9 +443,8 @@ function pdfparser_node_validate($node, &$form, &$form_state) {
 }
 
 function pdfparser_node_submit($node, $form, &$form_state) {
-//  dvm($node);
   $language = $form_state['values']['language'];
-  if ($form['#id'] == 'paper-node-form') {
+  if (strpos($form['#id'], 'paper-node-form') === 0) {
     if (isset($form_state['input']['author_reference'])) {
       $i = 0;
       foreach ($form_state['input']['author_reference']['extracted'] as $key => $author) {
