@@ -319,6 +319,7 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
       if ($node_name == 'title') {
         if ($confidence > $maxTitleConfidence) {
           $obj->title = (string)$xml;
+          $obj->title = trim(str_replace("&quot;", "", $obj->title), " \t\n\r\0\x0B\",");
           $maxTitleConfidence = $confidence;
         }
       }
@@ -338,6 +339,7 @@ function pdfparser_xml_to_array($xml, &$obj, &$tags_to_collect, $level, $citatio
       }
       elseif ($node_name == 'title') {
         $obj->citations[$citation_num]->title = (string)$xml;
+        $obj->citations[$citation_num]->title = trim(str_replace("&quot;", "", $obj->citations[$citation_num]->title), " \t\n\r\0\x0B\",");
       }
     }
   }
