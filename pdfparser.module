@@ -118,7 +118,12 @@ function pdfparser_settings_form_submit($form_id, &$form_values) {
     }
     elseif ($ret->result === 1) {
       drupal_set_message(t('Cannot save public key at server side. Maybe there is no permission to do that.'), 'error');
-//      dvm($ret_pure);
+    }
+    elseif ($ret->result === 2) {
+      drupal_set_message(t('Invalid ip address format: %ip', array('%ip' => $ret->msg)), 'error');
+    }
+    elseif ($ret->result === 3) {
+      drupal_set_message(t('Content of public key is suspicious.'), 'error');
     }
     else {
       drupal_set_message(t('Invalid server address.'), 'error');
