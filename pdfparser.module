@@ -487,7 +487,7 @@ function _pdfparser_paper_node_form_alter(&$form) {
   $lang = $form['field_paper_upload']['#language'];
   $desc = $form['field_paper_upload'][$lang][0]['#description'];
   $desc = explode("<br />", $desc);
-  $desc[0] = $desc[0] . ' ' . t('After uploading, the document will be parsed which will try to fill out your fields, so please hold on for a while. This should take only a few seconds.');
+  $desc[0] = $desc[0] . ' ' . t('Please be patient, the document is being parsed. The result will be used to pre-fill all the forms below. This should take only a few seconds.');
   $form['field_paper_upload'][$lang][0]['#description'] = implode("<br />", $desc);
 
   $form['#validate'][] = 'pdfparser_paper_form_validate';
