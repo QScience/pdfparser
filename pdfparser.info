@@ -5,6 +5,6 @@ dependencies[] = field_remove_item
 
 core = 7.x
 version = 7.x-1.x-dev
-package = PDF Parser
+package = QScience
 
 files[] = pdfparser.install
